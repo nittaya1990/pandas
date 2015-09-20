@@ -249,6 +249,19 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
     def attrs(self, value: Mapping[Optional[Hashable], Any]) -> None:
         self._attrs = dict(value)
 
+    @property
+    def _policy(self):
+        """ return my policy for internal implementation """
+        return self._data.policy
+
+    @_policy.setter
+    def _policy(self, value):
+        """
+        set my policy for internal implementation
+        should only set the property for state purposes
+        """
+        self._data.policy = value
+
     @classmethod
     def _validate_dtype(cls, dtype):
         """ validate the passed dtype """
@@ -1822,6 +1835,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             _typ=self._typ,
             _metadata=self._metadata,
             attrs=self.attrs,
+            _policy=self._policy,
             **meta,
         )
 
@@ -5682,7 +5696,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         dtype: object
         """
         data = self._data.copy(deep=deep)
-        return self._constructor(data).__finalize__(self)
+        return self._constructor(data, policy=self._policy).__finalize__(self)
 
     def __copy__(self: FrameOrSeries, deep: bool_t = True) -> FrameOrSeries:
         return self.copy(deep=deep)

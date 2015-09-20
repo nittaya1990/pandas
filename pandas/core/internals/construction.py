@@ -53,7 +53,7 @@ from pandas.core.internals import (
 # BlockManager Interface
 
 
-def arrays_to_mgr(arrays, arr_names, index, columns, dtype=None):
+def arrays_to_mgr(arrays, arr_names, index, columns, dtype=None, policy=None):
     """
     Segregate Series based on type and coerce into matrices.
 
@@ -71,7 +71,7 @@ def arrays_to_mgr(arrays, arr_names, index, columns, dtype=None):
     # from BlockManager perspective
     axes = [ensure_index(columns), index]
 
-    return create_block_manager_from_arrays(arrays, arr_names, axes)
+    return create_block_manager_from_arrays(arrays, arr_names, axes, policy=policy)
 
 
 def masked_rec_array_to_mgr(data, index, columns, dtype, copy: bool):
@@ -209,7 +209,7 @@ def init_ndarray(values, index, columns, dtype=None, copy=False):
     return create_block_manager_from_blocks(block_values, [columns, index])
 
 
-def init_dict(data, index, columns, dtype=None):
+def init_dict(data, index, columns, dtype=None, policy=None):
     """
     Segregate Series based on type and coerce into matrices.
     Needs to handle a lot of exceptional cases.
@@ -250,7 +250,7 @@ def init_dict(data, index, columns, dtype=None):
         arrays = [
             arr if not is_datetime64tz_dtype(arr) else arr.copy() for arr in arrays
         ]
-    return arrays_to_mgr(arrays, data_names, index, columns, dtype=dtype)
+    return arrays_to_mgr(arrays, data_names, index, columns, dtype=dtype, policy=policy)
 
 
 # ---------------------------------------------------------------------
