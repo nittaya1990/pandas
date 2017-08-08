@@ -756,6 +756,20 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
         cls.__le__ = _make_compare('__le__')
         cls.__ge__ = _make_compare('__ge__')
 
+    def union(self, other):
+        """
+        Set union of a CategoricalIndex with some iterable
+        """
+        from pandas.api.types import union_categoricals
+
+        if isinstance(other, CategoricalIndex):
+            categories = union_categoricals([self, other]).categories
+            left = self.set_categories(categories)
+            right = other.set_categories(categories)
+        else:
+            left, right = self, other
+        return super(CategoricalIndex, left).union(right)
+
     def _delegate_method(self, name, *args, **kwargs):
         """ method delegation to the ._values """
         method = getattr(self._values, name)

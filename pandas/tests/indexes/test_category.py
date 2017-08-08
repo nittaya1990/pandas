@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import operator
 import pytest
 
 import pandas.util.testing as tm
@@ -1030,3 +1031,60 @@ class TestCategoricalIndex(Base):
         msg = "the 'mode' parameter is not supported"
         tm.assert_raises_regex(ValueError, msg, idx.take,
                                indices, mode='clip')
+
+    def test_union_same(self):
+        a = CategoricalIndex(['a', 'b'])
+        result = a.union(a)
+        tm.assert_index_equal(result, a)
+
+    def test_union_same_categories(self):
+        a = CategoricalIndex(['a', 'b'], categories=['a', 'b', 'c'])
+        b = CategoricalIndex(['b', 'c'], categories=['a', 'b', 'c'])
+        result = a.union(b)
+        expected = CategoricalIndex(['a', 'b', 'c'], categories=['a', 'b', 'c'])
+        tm.assert_index_equal(result, expected)
+
+    def test_union_different_categories(self):
+        a = CategoricalIndex(['a', 'b'], categories=['a', 'b'])
+        b = CategoricalIndex(['b', 'c'], categories=['b', 'c'])
+        result = a.union(b)
+        expected = CategoricalIndex(['a', 'b', 'c'], categories=['a', 'b', 'c'])
+        tm.assert_index_equal(result, expected)
+
+    def test_union_same_categories_different_order(self):
+        a = CategoricalIndex(['a', 'b'], categories=['a', 'b'], ordered=False)
+        b = CategoricalIndex(['a', 'b'], categories=['a', 'b'], ordered=True)
+        result = a.union(b)
+        expected = CategoricalIndex(['a', 'b'], categories=['a', 'b'],
+                                    ordered=False)
+        tm.assert_index_equal(result, expected)
+
+        result = b.union(a)
+        tm.assert_index_equal(result, expected)
+
+    def test_union_different_categories_same_ordered(self):
+        a = CategoricalIndex(['a', 'b'], categories=['a', 'b', 'c'],
+                             ordered=True)
+        b = CategoricalIndex(['b', 'c'], categories=['a', 'b', 'c'],
+                             ordered=True)
+        result = a.union(b)
+        expected = CategoricalIndex(['a', 'b', 'c'],
+                                    categories=['a', 'b', 'c'],
+                                    ordered=True)
+        tm.assert_index_equal(result, expected)
+
+    @pytest.mark.parametrize('left, right', [
+        (Categorical(['a'], categories=['a', 'b'], ordered=True)),
+        # Cases:
+        # same, ordered, unordered
+        # same, unordered, ordered
+        # differ, ordered, unordered
+        # differ, unordered, ordered
+    ])
+    @pytest.mark.parametrize('op', [
+        operator.or_, operator.and_, operator.xor_,
+    ])
+    def test_setop_raises(self, left, right, op):
+        msg = ''
+        with tm.assert_raises_regex(TypeError, msg):
+            op(left, right)
