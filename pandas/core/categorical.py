@@ -2163,6 +2163,21 @@ class Categorical(PandasObject):
         return self._constructor(values=codes, categories=self.categories,
                                  ordered=self.ordered, fastpath=True)
 
+    # def _check_set_ops(self, other):
+    #     if not isinstance(other, Categorical):
+    #         raise TypeError("Other must be a `Categorical`")
+    #     if self.ordered != other.ordered:
+    #         raise ValueError("`ordered` must match")
+    #     elif self.ordered:
+    #         # we require that ...
+    #         # 1. The values in the symmetric difference less than the minimum
+    #         #    lie entirely in one set (likewise for maximum)
+    #         # 2. The values in the
+    #         S = self.categories.difference(other.categories)
+    #         T = other.categories.difference(self.categories)
+    #         U = self.categories & other.categories
+    #         self.categories
+
 # The Series.cat accessor
 
 

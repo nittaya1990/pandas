@@ -770,6 +770,22 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
             left, right = self, other
         return super(CategoricalIndex, left).union(right)
 
+    def intersection(self, other):
+        if isinstance(other, CategoricalIndex):
+            if self.ordered != other.ordered:
+                raise TypeError("`ordered` must match to intersect two "
+                                "`CategoricalIndex`")
+            if (self.ordered and
+                    set(self.categories) != set(other.categories)):
+                raise TypeError("Categories must match when ordered")
+            # hmm how to handle existing nans vs new nans
+            categories = self.categories & other.categories
+            left = self.set_categories(categories)
+            right = self.set_categories(categories)
+        else:
+            left, right = self, other
+        return super(CategoricalIndex, left).union(right)
+
     def _delegate_method(self, name, *args, **kwargs):
         """ method delegation to the ._values """
         method = getattr(self._values, name)

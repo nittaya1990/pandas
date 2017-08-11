@@ -1074,17 +1074,18 @@ class TestCategoricalIndex(Base):
         tm.assert_index_equal(result, expected)
 
     @pytest.mark.parametrize('left, right', [
-        (Categorical(['a'], categories=['a', 'b'], ordered=True)),
-        # Cases:
-        # same, ordered, unordered
-        # same, unordered, ordered
-        # differ, ordered, unordered
-        # differ, unordered, ordered
+        (CategoricalIndex(['a'], categories=['a', 'b'], ordered=True),
+         CategoricalIndex(['a'], categories=['a', 'b'])),
+        (CategoricalIndex(['a'], categories=['a'], ordered=True),
+         CategoricalIndex(['a'], categories=['a', 'b'], ordered=True))
     ])
     @pytest.mark.parametrize('op', [
-        operator.or_, operator.and_, operator.xor_,
+        operator.or_, operator.and_, operator.xor,
     ])
     def test_setop_raises(self, left, right, op):
         msg = ''
         with tm.assert_raises_regex(TypeError, msg):
             op(left, right)
+
+        with tm.assert_raises_regex(TypeError, msg):
+            op(right, left)
