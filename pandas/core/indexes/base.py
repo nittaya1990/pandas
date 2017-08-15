@@ -2234,7 +2234,10 @@ class Index(IndexOpsMixin, PandasObject):
                 value_set = set(self._values)
                 result.extend([x for x in other._values if x not in value_set])
         else:
-            indexer = self.get_indexer(other)
+            try:
+                indexer = self.get_indexer(other)
+            except InvalidIndexError:
+                indexer, _ = self.get_indexer_non_unique(other)
             indexer, = (indexer == -1).nonzero()
 
             if len(indexer) > 0:
