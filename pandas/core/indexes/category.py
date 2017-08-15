@@ -286,6 +286,11 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
             attrs.append(('length', len(self)))
         return attrs
 
+    @classmethod
+    def from_codes(cls, codes, categories, ordered=False):
+        from pandas.core.categorical import Categorical
+        return cls(Categorical.from_codes(codes, categories, ordered=ordered))
+
     @property
     def inferred_type(self):
         return 'categorical'
@@ -764,8 +769,25 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
 
         if isinstance(other, CategoricalIndex):
             categories = union_categoricals([self, other]).categories
-            left = self.set_categories(categories)
-            right = other.set_categories(categories)
+            if self.ordered and other.ordered:
+                ordered = True
+                if (categories.equals(self.categories) and
+                        categories.equals(other.categories)):
+                    # codes are assured to match already
+                    codes = Index(self.codes).union(other.codes)
+                else:
+                    # TODO: I think this block isn't ever hit,
+                    # but if / when we enhance union_categoricals it will be
+                    raise TypeError
+            elif self.ordered:
+                raise TypeError("Orderedness must match")  # TODO: refactor call eslsewhere
+            else:
+                ordered = False
+                left = self.set_categories(categories)
+                right = other.set_categories(categories)
+                codes = Index(left.codes).union(right.codes)
+
+            return type(self).from_codes(codes, categories, ordered=ordered)
         else:
             left, right = self, other
         return super(CategoricalIndex, left).union(right)
@@ -785,6 +807,9 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
         else:
             left, right = self, other
         return super(CategoricalIndex, left).union(right)
+
+    def symmetric_difference(self, other):
+        return self.difference(other).union(other.difference(self))
 
     def _delegate_method(self, name, *args, **kwargs):
         """ method delegation to the ._values """

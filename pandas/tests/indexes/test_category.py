@@ -1048,18 +1048,8 @@ class TestCategoricalIndex(Base):
         a = CategoricalIndex(['a', 'b'], categories=['a', 'b'])
         b = CategoricalIndex(['b', 'c'], categories=['b', 'c'])
         result = a.union(b)
-        expected = CategoricalIndex(['a', 'b', 'c'], categories=['a', 'b', 'c'])
-        tm.assert_index_equal(result, expected)
-
-    def test_union_same_categories_different_order(self):
-        a = CategoricalIndex(['a', 'b'], categories=['a', 'b'], ordered=False)
-        b = CategoricalIndex(['a', 'b'], categories=['a', 'b'], ordered=True)
-        result = a.union(b)
-        expected = CategoricalIndex(['a', 'b'], categories=['a', 'b'],
-                                    ordered=False)
-        tm.assert_index_equal(result, expected)
-
-        result = b.union(a)
+        expected = CategoricalIndex(['a', 'b', 'c'],
+                                    categories=['a', 'b', 'c'])
         tm.assert_index_equal(result, expected)
 
     def test_union_different_categories_same_ordered(self):
