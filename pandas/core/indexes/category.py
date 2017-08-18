@@ -800,10 +800,18 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
             if (self.ordered and
                     set(self.categories) != set(other.categories)):
                 raise TypeError("Categories must match when ordered")
-            # hmm how to handle existing nans vs new nans
+            # hmm how to handle existing nans vs new nans?
+            # for Index.intersection? The current Index.& is buggy, so whats's
+            # ideal? I think we should
+            # keep around min(j, k) where j, k are the number of NaNs in l, r
+            ordered = self.ordered
             categories = self.categories & other.categories
             left = self.set_categories(categories)
-            right = self.set_categories(categories)
+            right = other.set_categories(categories)
+
+            codes = Index(left.codes) & right.codes
+
+            return type(self).from_codes(codes, categories, ordered=ordered)
         else:
             left, right = self, other
         return super(CategoricalIndex, left).union(right)

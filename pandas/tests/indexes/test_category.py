@@ -1032,24 +1032,33 @@ class TestCategoricalIndex(Base):
         tm.assert_raises_regex(ValueError, msg, idx.take,
                                indices, mode='clip')
 
-    def test_union_same(self):
+    @pytest.mark.parametrize('op', [operator.and_, operator.or_])
+    def test_same(self, op):
         a = CategoricalIndex(['a', 'b'])
-        result = a.union(a)
+        result = op(a, a)
         tm.assert_index_equal(result, a)
 
-    def test_union_same_categories(self):
+    @pytest.mark.parametrize('op, expected', [
+        (operator.or_, CategoricalIndex(['a', 'b', 'c'],
+                                        categories=['a', 'b', 'c'])),
+        (operator.and_, CategoricalIndex(['b'],
+                                         categories=['a', 'b', 'c'])),
+    ])
+    def test_same_categories_different_values(self, op, expected):
         a = CategoricalIndex(['a', 'b'], categories=['a', 'b', 'c'])
         b = CategoricalIndex(['b', 'c'], categories=['a', 'b', 'c'])
-        result = a.union(b)
-        expected = CategoricalIndex(['a', 'b', 'c'], categories=['a', 'b', 'c'])
+        result = op(a, b)
         tm.assert_index_equal(result, expected)
 
-    def test_union_different_categories(self):
+    @pytest.mark.parametrize('op, expected', [
+        (operator.or_, CategoricalIndex(['a', 'b', 'c'],
+                                        categories=['a', 'b', 'c'])),
+        (operator.and_, CategoricalIndex(['b'], ['b'])),
+    ])
+    def test_different_categories_different_values(self, op, expected):
         a = CategoricalIndex(['a', 'b'], categories=['a', 'b'])
         b = CategoricalIndex(['b', 'c'], categories=['b', 'c'])
-        result = a.union(b)
-        expected = CategoricalIndex(['a', 'b', 'c'],
-                                    categories=['a', 'b', 'c'])
+        result = op(a, b)
         tm.assert_index_equal(result, expected)
 
     def test_union_different_categories_same_ordered(self):
@@ -1062,6 +1071,20 @@ class TestCategoricalIndex(Base):
                                     categories=['a', 'b', 'c'],
                                     ordered=True)
         tm.assert_index_equal(result, expected)
+
+    def test_intersect_same(self):
+        a = CategoricalIndex(['a', 'b'])
+        result = a & a
+        tm.assert_index_equal(result, a)
+
+    def test_intersect_same_categories(self):
+        pass
+
+    def test_intersect_different_categories(self):
+        pass
+
+    def test_intersect_different_categories_same_order(self):
+        pass
 
     @pytest.mark.parametrize('left, right', [
         (CategoricalIndex(['a'], categories=['a', 'b'], ordered=True),
