@@ -1,7 +1,7 @@
 .. _whatsnew_0230:
 
-v0.23.0
--------
+v0.23.0 (May 7, 2018)
+---------------------
 
 This is a major release from 0.22.0 and includes a number of API changes,
 deprecations, new features, enhancements, and performance improvements along
@@ -18,81 +18,84 @@ version.
 New features
 ~~~~~~~~~~~~
 
-.. _whatsnew_0210.enhancements.limit_area:
+.. _whatsnew_0230.enhancements.round-trippable_json:
 
-``DataFrame.interpolate`` has gained the ``limit_area`` kwarg
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+JSON read/write round-trippable with ``orient='table'``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-:meth:`DataFrame.interpolate` has gained a ``limit_area`` parameter to allow further control of which ``NaN`` s are replaced.
-Use ``limit_area='inside'`` to fill only NaNs surrounded by valid values or use ``limit_area='outside'`` to fill only ``NaN`` s
-outside the existing valid values while preserving those inside.  (:issue:`16284`) See the :ref:`full documentation here <missing_data.interp_limits>`.
-
+A ``DataFrame`` can now be written to and subsequently read back via JSON while preserving metadata through usage of the ``orient='table'`` argument (see :issue:`18912` and :issue:`9146`). Previously, none of the available ``orient`` values guaranteed the preservation of dtypes and index names, amongst other metadata.
 
 .. ipython:: python
 
-   ser = pd.Series([np.nan, np.nan, 5, np.nan, np.nan, np.nan, 13, np.nan, np.nan])
-   ser
+   df = pd.DataFrame({'foo': [1, 2, 3, 4],
+		      'bar': ['a', 'b', 'c', 'd'],
+		      'baz': pd.date_range('2018-01-01', freq='d', periods=4),
+		      'qux': pd.Categorical(['a', 'b', 'c', 'c'])
+		      }, index=pd.Index(range(4), name='idx'))
+   df
+   df.dtypes
+   df.to_json('test.json', orient='table')
+   new_df = pd.read_json('test.json', orient='table')
+   new_df
+   new_df.dtypes
 
-Fill one consecutive inside value in both directions
+Please note that the string `index` is not supported with the round trip format, as it is used by default in ``write_json`` to indicate a missing index name.
+
+.. ipython:: python
+   :okwarning:
+
+   df.index.name = 'index'
+
+   df.to_json('test.json', orient='table')
+   new_df = pd.read_json('test.json', orient='table')
+   new_df
+   new_df.dtypes
+
+.. ipython:: python
+   :suppress:
+
+   import os
+   os.remove('test.json')
+
+.. _whatsnew_0230.enhancements.assign_dependent:
+
+``.assign()`` accepts dependent arguments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :func:`DataFrame.assign` now accepts dependent keyword arguments for python version later than 3.6 (see also `PEP 468
+<https://www.python.org/dev/peps/pep-0468/>`_). Later keyword arguments may now refer to earlier ones if the argument is a callable. See the
+:ref:`documentation here <dsintro.chained_assignment>` (:issue:`14207`)
 
 .. ipython:: python
 
-   ser.interpolate(limit_direction='both', limit_area='inside', limit=1)
+    df = pd.DataFrame({'A': [1, 2, 3]})
+    df
+    df.assign(B=df.A, C=lambda x:x['A']+ x['B'])
 
-Fill all consecutive outside values backward
+.. warning::
 
-.. ipython:: python
+  This may subtly change the behavior of your code when you're
+  using ``.assign()`` to update an existing column. Previously, callables
+  referring to other variables being updated would get the "old" values
 
-   ser.interpolate(limit_direction='backward', limit_area='outside')
+  Previous Behavior:
 
-Fill all consecutive outside values in both directions
+  .. code-block:: ipython
 
-.. ipython:: python
+      In [2]: df = pd.DataFrame({"A": [1, 2, 3]})
 
-   ser.interpolate(limit_direction='both', limit_area='outside')
+      In [3]: df.assign(A=lambda df: df.A + 1, C=lambda df: df.A * -1)
+      Out[3]:
+         A  C
+      0  2 -1
+      1  3 -2
+      2  4 -3
 
-.. _whatsnew_0210.enhancements.get_dummies_dtype:
+  New Behavior:
 
-``get_dummies`` now supports ``dtype`` argument
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  .. ipython:: python
 
-The :func:`get_dummies` now accepts a ``dtype`` argument, which specifies a dtype for the new columns. The default remains uint8. (:issue:`18330`)
-
-.. ipython:: python
-
-   df = pd.DataFrame({'a': [1, 2], 'b': [3, 4], 'c': [5, 6]})
-   pd.get_dummies(df, columns=['c']).dtypes
-   pd.get_dummies(df, columns=['c'], dtype=bool).dtypes
-
-
-.. _whatsnew_0230.enhancements.window_raw:
-
-Rolling/Expanding.apply() accepts a ``raw`` keyword to pass a ``Series`` to the function
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-:func:`Series.rolling().apply() <pandas.core.window.Rolling.apply>`, :func:`DataFrame.rolling().apply() <pandas.core.window.Rolling.apply>`,
-:func:`Series.expanding().apply() <pandas.core.window.Expanding.apply>`, and :func:`DataFrame.expanding().apply() <pandas.core.window.Expanding.apply>` have gained a ``raw=None`` parameter.
-This is similar to :func:`DataFame.apply`. This parameter, if ``True`` allows one to send a ``np.ndarray`` to the applied function. If ``False`` a ``Series`` will be passed. The
-default is ``None``, which preserves backward compatibility, so this will default to ``True``, sending an ``np.ndarray``.
-In a future version the default will be changed to ``False``, sending a ``Series``. (:issue:`5071`, :issue:`20584`)
-
-.. ipython:: python
-
-   s = pd.Series(np.arange(5), np.arange(5) + 1)
-   s
-
-Pass a ``Series``:
-
-.. ipython:: python
-
-   s.rolling(2, min_periods=1).apply(lambda x: x.iloc[-1], raw=False)
-
-Mimic the original behavior of passing a ndarray:
-
-.. ipython:: python
-
-   s.rolling(2, min_periods=1).apply(lambda x: x[-1], raw=True)
-
+      df.assign(A=df.A+1, C= lambda df: df.A* -1)
 
 .. _whatsnew_0230.enhancements.merge_on_columns_and_levels:
 
@@ -150,194 +153,6 @@ resetting indexes. See the :ref:`Sorting by Indexes and Values
 
    # Sort by 'second' (index) and 'A' (column)
    df_multi.sort_values(by=['second', 'A'])
-
-.. _whatsnew_0230.enhancements.timedelta_mod:
-
-Timedelta mod method
-^^^^^^^^^^^^^^^^^^^^
-
-``mod`` (%) and ``divmod`` operations are now defined on ``Timedelta`` objects
-when operating with either timedelta-like or with numeric arguments.
-See the :ref:`documentation here <timedeltas.mod_divmod>`. (:issue:`19365`)
-
-.. ipython:: python
-
-    td = pd.Timedelta(hours=37)
-    td % pd.Timedelta(minutes=45)
-
-.. _whatsnew_0230.enhancements.ran_inf:
-
-``.rank()`` handles ``inf`` values when ``NaN`` are present
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In previous versions, ``.rank()`` would assign ``inf`` elements ``NaN`` as their ranks. Now ranks are calculated properly. (:issue:`6945`)
-
-.. ipython:: python
-
-    s = pd.Series([-np.inf, 0, 1, np.nan, np.inf])
-    s
-
-Previous Behavior:
-
-.. code-block:: ipython
-
-    In [11]: s.rank()
-    Out[11]:
-    0    1.0
-    1    2.0
-    2    3.0
-    3    NaN
-    4    NaN
-    dtype: float64
-
-Current Behavior:
-
-.. ipython:: python
-
-    s.rank()
-
-Furthermore, previously if you rank ``inf`` or ``-inf`` values together with ``NaN`` values, the calculation won't distinguish ``NaN`` from infinity when using 'top' or 'bottom' argument.
-
-.. ipython:: python
-
-    s = pd.Series([np.nan, np.nan, -np.inf, -np.inf])
-    s
-
-Previous Behavior:
-
-.. code-block:: ipython
-
-    In [15]: s.rank(na_option='top')
-    Out[15]:
-    0    2.5
-    1    2.5
-    2    2.5
-    3    2.5
-    dtype: float64
-
-Current Behavior:
-
-.. ipython:: python
-
-    s.rank(na_option='top')
-
-These bugs were squashed:
-
-- Bug in :meth:`DataFrame.rank` and :meth:`Series.rank` when ``method='dense'`` and ``pct=True`` in which percentile ranks were not being used with the number of distinct observations (:issue:`15630`)
-- Bug in :meth:`Series.rank` and :meth:`DataFrame.rank` when ``ascending='False'`` failed to return correct ranks for infinity if ``NaN`` were present (:issue:`19538`)
-- Bug in :func:`DataFrameGroupBy.rank` where ranks were incorrect when both infinity and ``NaN`` were present (:issue:`20561`)
-
-.. _whatsnew_0230.enhancements.round-trippable_json:
-
-JSON read/write round-trippable with ``orient='table'``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A ``DataFrame`` can now be written to and subsequently read back via JSON while preserving metadata through usage of the ``orient='table'`` argument (see :issue:`18912` and :issue:`9146`). Previously, none of the available ``orient`` values guaranteed the preservation of dtypes and index names, amongst other metadata.
-
-.. ipython:: python
-
-   df = pd.DataFrame({'foo': [1, 2, 3, 4],
-		      'bar': ['a', 'b', 'c', 'd'],
-		      'baz': pd.date_range('2018-01-01', freq='d', periods=4),
-		      'qux': pd.Categorical(['a', 'b', 'c', 'c'])
-		      }, index=pd.Index(range(4), name='idx'))
-   df
-   df.dtypes
-   df.to_json('test.json', orient='table')
-   new_df = pd.read_json('test.json', orient='table')
-   new_df
-   new_df.dtypes
-
-Please note that the string `index` is not supported with the round trip format, as it is used by default in ``write_json`` to indicate a missing index name.
-
-.. ipython:: python
-   :okwarning:
-
-   df.index.name = 'index'
-
-   df.to_json('test.json', orient='table')
-   new_df = pd.read_json('test.json', orient='table')
-   new_df
-   new_df.dtypes
-
-.. ipython:: python
-   :suppress:
-
-   import os
-   os.remove('test.json')
-
-
-.. _whatsnew_0230.enhancements.assign_dependent:
-
-
-``.assign()`` accepts dependent arguments
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The :func:`DataFrame.assign` now accepts dependent keyword arguments for python version later than 3.6 (see also `PEP 468
-<https://www.python.org/dev/peps/pep-0468/>`_). Later keyword arguments may now refer to earlier ones if the argument is a callable. See the
-:ref:`documentation here <dsintro.chained_assignment>` (:issue:`14207`)
-
-.. ipython:: python
-
-    df = pd.DataFrame({'A': [1, 2, 3]})
-    df
-    df.assign(B=df.A, C=lambda x:x['A']+ x['B'])
-
-.. warning::
-
-  This may subtly change the behavior of your code when you're
-  using ``.assign()`` to update an existing column. Previously, callables
-  referring to other variables being updated would get the "old" values
-
-  Previous Behavior:
-
-  .. code-block:: ipython
-
-      In [2]: df = pd.DataFrame({"A": [1, 2, 3]})
-
-      In [3]: df.assign(A=lambda df: df.A + 1, C=lambda df: df.A * -1)
-      Out[3]:
-         A  C
-      0  2 -1
-      1  3 -2
-      2  4 -3
-
-  New Behavior:
-
-  .. ipython:: python
-
-      df.assign(A=df.A+1, C= lambda df: df.A* -1)
-
-
-.. _whatsnew_0230.enhancements.astype_category:
-
-``DataFrame.astype`` performs column-wise conversion to ``Categorical``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-:meth:`DataFrame.astype` can now perform column-wise conversion to ``Categorical`` by supplying the string ``'category'`` or
-a :class:`~pandas.api.types.CategoricalDtype`. Previously, attempting this would raise a ``NotImplementedError``. See the
-:ref:`categorical.objectcreation` section of the documentation for more details and examples. (:issue:`12860`, :issue:`18099`)
-
-Supplying the string ``'category'`` performs column-wise conversion, with only labels appearing in a given column set as categories:
-
-.. ipython:: python
-
-    df = pd.DataFrame({'A': list('abca'), 'B': list('bccd')})
-    df = df.astype('category')
-    df['A'].dtype
-    df['B'].dtype
-
-
-Supplying a ``CategoricalDtype`` will make the categories in each column consistent with the supplied dtype:
-
-.. ipython:: python
-
-    from pandas.api.types import CategoricalDtype
-    df = pd.DataFrame({'A': list('abca'), 'B': list('bccd')})
-    cdt = CategoricalDtype(categories=list('abcd'), ordered=True)
-    df = df.astype(cdt)
-    df['A'].dtype
-    df['B'].dtype
 
 .. _whatsnew_023.enhancements.extension:
 
@@ -447,6 +262,186 @@ For pivotting operations, this behavior is *already* controlled by the ``dropna`
    pd.pivot_table(df, values='values', index=['A', 'B'],
                   dropna=False)
 
+.. _whatsnew_0210.enhancements.limit_area:
+
+``DataFrame.interpolate`` has gained the ``limit_area`` kwarg
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:meth:`DataFrame.interpolate` has gained a ``limit_area`` parameter to allow further control of which ``NaN`` s are replaced.
+Use ``limit_area='inside'`` to fill only NaNs surrounded by valid values or use ``limit_area='outside'`` to fill only ``NaN`` s
+outside the existing valid values while preserving those inside.  (:issue:`16284`) See the :ref:`full documentation here <missing_data.interp_limits>`.
+
+
+.. ipython:: python
+
+   ser = pd.Series([np.nan, np.nan, 5, np.nan, np.nan, np.nan, 13, np.nan, np.nan])
+   ser
+
+Fill one consecutive inside value in both directions
+
+.. ipython:: python
+
+   ser.interpolate(limit_direction='both', limit_area='inside', limit=1)
+
+Fill all consecutive outside values backward
+
+.. ipython:: python
+
+   ser.interpolate(limit_direction='backward', limit_area='outside')
+
+Fill all consecutive outside values in both directions
+
+.. ipython:: python
+
+   ser.interpolate(limit_direction='both', limit_area='outside')
+
+.. _whatsnew_0210.enhancements.get_dummies_dtype:
+
+``get_dummies`` now supports ``dtype`` argument
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :func:`get_dummies` now accepts a ``dtype`` argument, which specifies a dtype for the new columns. The default remains uint8. (:issue:`18330`)
+
+.. ipython:: python
+
+   df = pd.DataFrame({'a': [1, 2], 'b': [3, 4], 'c': [5, 6]})
+   pd.get_dummies(df, columns=['c']).dtypes
+   pd.get_dummies(df, columns=['c'], dtype=bool).dtypes
+
+.. _whatsnew_0230.enhancements.window_raw:
+
+Rolling/Expanding.apply() accepts a ``raw`` keyword to pass a ``Series`` to the function
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:func:`Series.rolling().apply() <pandas.core.window.Rolling.apply>`, :func:`DataFrame.rolling().apply() <pandas.core.window.Rolling.apply>`,
+:func:`Series.expanding().apply() <pandas.core.window.Expanding.apply>`, and :func:`DataFrame.expanding().apply() <pandas.core.window.Expanding.apply>` have gained a ``raw=None`` parameter.
+This is similar to :func:`DataFame.apply`. This parameter, if ``True`` allows one to send a ``np.ndarray`` to the applied function. If ``False`` a ``Series`` will be passed. The
+default is ``None``, which preserves backward compatibility, so this will default to ``True``, sending an ``np.ndarray``.
+In a future version the default will be changed to ``False``, sending a ``Series``. (:issue:`5071`, :issue:`20584`)
+
+.. ipython:: python
+
+   s = pd.Series(np.arange(5), np.arange(5) + 1)
+   s
+
+Pass a ``Series``:
+
+.. ipython:: python
+
+   s.rolling(2, min_periods=1).apply(lambda x: x.iloc[-1], raw=False)
+
+Mimic the original behavior of passing a ndarray:
+
+.. ipython:: python
+
+   s.rolling(2, min_periods=1).apply(lambda x: x[-1], raw=True)
+
+
+.. _whatsnew_0230.enhancements.timedelta_mod:
+
+Timedelta mod method
+^^^^^^^^^^^^^^^^^^^^
+
+``mod`` (%) and ``divmod`` operations are now defined on ``Timedelta`` objects
+when operating with either timedelta-like or with numeric arguments.
+See the :ref:`documentation here <timedeltas.mod_divmod>`. (:issue:`19365`)
+
+.. ipython:: python
+
+    td = pd.Timedelta(hours=37)
+    td % pd.Timedelta(minutes=45)
+
+.. _whatsnew_0230.enhancements.ran_inf:
+
+``.rank()`` handles ``inf`` values when ``NaN`` are present
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In previous versions, ``.rank()`` would assign ``inf`` elements ``NaN`` as their ranks. Now ranks are calculated properly. (:issue:`6945`)
+
+.. ipython:: python
+
+    s = pd.Series([-np.inf, 0, 1, np.nan, np.inf])
+    s
+
+Previous Behavior:
+
+.. code-block:: ipython
+
+    In [11]: s.rank()
+    Out[11]:
+    0    1.0
+    1    2.0
+    2    3.0
+    3    NaN
+    4    NaN
+    dtype: float64
+
+Current Behavior:
+
+.. ipython:: python
+
+    s.rank()
+
+Furthermore, previously if you rank ``inf`` or ``-inf`` values together with ``NaN`` values, the calculation won't distinguish ``NaN`` from infinity when using 'top' or 'bottom' argument.
+
+.. ipython:: python
+
+    s = pd.Series([np.nan, np.nan, -np.inf, -np.inf])
+    s
+
+Previous Behavior:
+
+.. code-block:: ipython
+
+    In [15]: s.rank(na_option='top')
+    Out[15]:
+    0    2.5
+    1    2.5
+    2    2.5
+    3    2.5
+    dtype: float64
+
+Current Behavior:
+
+.. ipython:: python
+
+    s.rank(na_option='top')
+
+These bugs were squashed:
+
+- Bug in :meth:`DataFrame.rank` and :meth:`Series.rank` when ``method='dense'`` and ``pct=True`` in which percentile ranks were not being used with the number of distinct observations (:issue:`15630`)
+- Bug in :meth:`Series.rank` and :meth:`DataFrame.rank` when ``ascending='False'`` failed to return correct ranks for infinity if ``NaN`` were present (:issue:`19538`)
+- Bug in :func:`DataFrameGroupBy.rank` where ranks were incorrect when both infinity and ``NaN`` were present (:issue:`20561`)
+
+.. _whatsnew_0230.enhancements.astype_category:
+
+``DataFrame.astype`` performs column-wise conversion to ``Categorical``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:meth:`DataFrame.astype` can now perform column-wise conversion to ``Categorical`` by supplying the string ``'category'`` or
+a :class:`~pandas.api.types.CategoricalDtype`. Previously, attempting this would raise a ``NotImplementedError``. See the
+:ref:`categorical.objectcreation` section of the documentation for more details and examples. (:issue:`12860`, :issue:`18099`)
+
+Supplying the string ``'category'`` performs column-wise conversion, with only labels appearing in a given column set as categories:
+
+.. ipython:: python
+
+    df = pd.DataFrame({'A': list('abca'), 'B': list('bccd')})
+    df = df.astype('category')
+    df['A'].dtype
+    df['B'].dtype
+
+
+Supplying a ``CategoricalDtype`` will make the categories in each column consistent with the supplied dtype:
+
+.. ipython:: python
+
+    from pandas.api.types import CategoricalDtype
+    df = pd.DataFrame({'A': list('abca'), 'B': list('bccd')})
+    cdt = CategoricalDtype(categories=list('abcd'), ordered=True)
+    df = df.astype(cdt)
+    df['A'].dtype
+    df['B'].dtype
 
 .. _whatsnew_0230.enhancements.other:
 
