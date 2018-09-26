@@ -4,11 +4,11 @@ import numpy as np
 from pandas.compat import (string_types, text_type, binary_type,
                            PY3, PY36)
 from pandas._libs import algos, lib
-from pandas._libs.tslibs import conversion
+from pandas._libs.tslibs import conversion, Timestamp
 
 from pandas.core.dtypes.dtypes import (
     registry, CategoricalDtype, CategoricalDtypeType, DatetimeTZDtype,
-    DatetimeTZDtypeType, PeriodDtype, PeriodDtypeType, IntervalDtype,
+    PeriodDtype, PeriodDtypeType, IntervalDtype,
     IntervalDtypeType, PandasExtensionDtype, ExtensionDtype,
     _pandas_registry)
 from pandas.core.dtypes.generic import (
@@ -1905,7 +1905,7 @@ def _get_dtype_type(arr_or_dtype):
     elif isinstance(arr_or_dtype, CategoricalDtype):
         return CategoricalDtypeType
     elif isinstance(arr_or_dtype, DatetimeTZDtype):
-        return DatetimeTZDtypeType
+        return Timestamp
     elif isinstance(arr_or_dtype, IntervalDtype):
         return IntervalDtypeType
     elif isinstance(arr_or_dtype, PeriodDtype):
@@ -1914,7 +1914,7 @@ def _get_dtype_type(arr_or_dtype):
         if is_categorical_dtype(arr_or_dtype):
             return CategoricalDtypeType
         elif is_datetime64tz_dtype(arr_or_dtype):
-            return DatetimeTZDtypeType
+            return Timestamp
         elif is_period_dtype(arr_or_dtype):
             return PeriodDtypeType
         elif is_interval_dtype(arr_or_dtype):

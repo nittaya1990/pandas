@@ -4,7 +4,7 @@ import re
 import numpy as np
 from pandas import compat
 from pandas.core.dtypes.generic import ABCIndexClass, ABCCategoricalIndex
-from pandas._libs.tslibs import NaT
+from pandas._libs.tslibs import NaT, Timestamp
 
 from .base import ExtensionDtype, _DtypeOpsMixin
 
@@ -470,13 +470,6 @@ class CategoricalDtype(PandasExtensionDtype, ExtensionDtype):
         return is_bool_dtype(self.categories)
 
 
-class DatetimeTZDtypeType(type):
-    """
-    the type of DatetimeTZDtype, this metaclass determines subclass ability
-    """
-    pass
-
-
 class DatetimeTZDtype(ExtensionDtype):
 
     """
@@ -486,7 +479,7 @@ class DatetimeTZDtype(ExtensionDtype):
     THIS IS NOT A REAL NUMPY DTYPE, but essentially a sub-class of
     np.datetime64[ns]
     """
-    type = DatetimeTZDtypeType
+    type = Timestamp
     kind = 'M'
     str = '|M8[ns]'
     num = 101

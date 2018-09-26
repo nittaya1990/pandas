@@ -2,10 +2,9 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from pandas.core.arrays.datetimetz import DatetimeTZArray
+from pandas.core.arrays.datetimetz import DatetimeTZArray, to_datetimetz_array
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pandas.tests.extension import base
-from pandas.core.internals.blocks import DatetimeTZBlock
 
 
 @pytest.fixture
@@ -22,6 +21,14 @@ def data(dtype):
     return DatetimeTZArray(values, dtype)
 
 
+@pytest.fixture
+def data_missing(dtype):
+    return to_datetimetz_array(['NaT', '2017-01-01'], tz=dtype.tz)
+
+
+@pytest.fixture
+def na_value():
+    return pd.NaT
 
 
 class BaseDatetimeTZTests(object):
@@ -33,7 +40,6 @@ class TestDtype(BaseDatetimeTZTests, base.BaseDtypeTests):
 
 
 class TestConstructors(BaseDatetimeTZTests, base.BaseConstructorsTests):
-    # block = DatetimeTZBlock
     pass
 
 
@@ -41,3 +47,7 @@ class TestInterface(BaseDatetimeTZTests, base.BaseInterfaceTests):
 
     def test_no_values_attribute(self, data):
         pass
+
+
+class TestGetitem(BaseDatetimeTZTests, base.BaseGetitemTests):
+    pass

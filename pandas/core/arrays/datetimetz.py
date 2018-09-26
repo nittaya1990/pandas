@@ -8,7 +8,7 @@ from pandas.core.dtypes.inference import (
     is_scalar,
 )
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
-from pandas._libs.tslib import Timestamp
+from pandas._libs.tslib import Timestamp, NaT
 
 
 class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
@@ -50,8 +50,16 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
     # ------------------------------------------------------------------------
     @classmethod
     def _from_sequence(cls, scalars, dtype=None, copy=False):
+        # this is all changing
+        npnat = np.datetime64('NaT')
         if dtype is None:
-            dtype = DatetimeTZDtype('ns', scalars[0].tz)
+            for scalar in scalars:
+                if getattr(scalar, 'tz', None):
+                    # not na
+                    dtype = DatetimeTZDtype('ns', scalar.tz)
+                    break
+
+        scalars = [npnat if val is NaT else val for val in scalars]
         return to_datetimetz_array(scalars, tz=dtype.tz)
 
     @classmethod
@@ -87,9 +95,12 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
 
     def take(self, indices, allow_fill=False, fill_value=None):
         from pandas.core.algorithms import take
+        if fill_value is None:
+            fill_value = self.dtype.na_value
 
         result = take(self.values, indices,
-                      allow_fill=allow_fill, fill_value=self.dtype.na_value)
+                      allow_fill=allow_fill,
+                      fill_value=fill_value)
         return type(self)(result, self.dtype)
 
     # ------------------------------------------------------------------------
