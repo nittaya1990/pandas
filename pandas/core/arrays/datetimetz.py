@@ -112,6 +112,24 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
         dtype = to_concat[0].dtype
         return cls(np.concatenate(to_concat), dtype=dtype)
 
+    # ------------------------------------------------------------------------
+    # Methods
+    # ------------------------------------------------------------------------
+    def value_counts(self, dropna=True):
+        from pandas.core.algorithms import value_counts
+
+        if dropna:
+            values = self[~self.isna()].values
+        else:
+            values = self.values
+
+        # these are tz-naive
+        counts = value_counts(values)
+        return type(counts)(counts.values,
+                            index=counts.index.astype(self.dtype),
+                            name=counts.name,
+                            copy=False)
+
 
 def to_datetimetz_array(values, tz=None):
     with warnings.catch_warnings():

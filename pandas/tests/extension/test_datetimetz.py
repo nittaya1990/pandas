@@ -51,3 +51,7 @@ class TestInterface(BaseDatetimeTZTests, base.BaseInterfaceTests):
 
 class TestGetitem(BaseDatetimeTZTests, base.BaseGetitemTests):
     pass
+
+
+class TestMethods(BaseDatetimeTZTests, base.BaseMethodsTests):
+    pass
