@@ -2962,7 +2962,7 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         """ we internally represent the data as a DatetimeIndex, but for
         external compat with ndarray, export as a ndarray of Timestamps
         """
-        return self.values.astype('datetime64[ns]').values
+        return self.values.values
 
     def get_values(self, dtype=None):
         # return object dtype as Timestamps with the zones
@@ -3039,6 +3039,10 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
             result = self.values._shallow_copy(result)
 
         return result
+
+    def to_dense(self):
+        # same as ExtensionBlock
+        return np.asarray(self.values)
 
     @property
     def _box_func(self):

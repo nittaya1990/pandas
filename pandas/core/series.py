@@ -184,7 +184,6 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
                 index = data.index
 
         else:
-
             if index is not None:
                 index = ensure_index(index)
 

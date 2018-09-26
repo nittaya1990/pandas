@@ -4,6 +4,7 @@ import re
 import numpy as np
 from pandas import compat
 from pandas.core.dtypes.generic import ABCIndexClass, ABCCategoricalIndex
+from pandas._libs.tslibs import NaT
 
 from .base import ExtensionDtype, _DtypeOpsMixin
 
@@ -490,6 +491,7 @@ class DatetimeTZDtype(PandasExtensionDtype):
     str = '|M8[ns]'
     num = 101
     base = np.dtype('M8[ns]')
+    na_value = NaT
     _metadata = ['unit', 'tz']
     _match = re.compile(r"(datetime64|M8)\[(?P<unit>.+), (?P<tz>.+)\]")
     _cache = {}
