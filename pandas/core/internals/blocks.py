@@ -64,7 +64,7 @@ import pandas.core.algorithms as algos
 import pandas.core.missing as missing
 from pandas.core.base import PandasObject
 
-from pandas.core.arrays import Categorical
+from pandas.core.arrays import Categorical, DatetimeTZArray
 from pandas.core.sparse.array import SparseArray
 
 from pandas.core.indexes.datetimes import DatetimeIndex
@@ -2913,6 +2913,10 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         super(DatetimeTZBlock, self).__init__(values, placement=placement,
                                               ndim=ndim)
 
+    @property
+    def _holder(self):
+        return DatetimeTZArray
+
     def _maybe_coerce_values(self, values, dtype=None):
         """Input validation for values passed to __init__. Ensure that
         we have datetime64TZ, coercing if necessary.
@@ -2928,8 +2932,8 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         -------
         values : ndarray[datetime64ns]
         """
-        if not isinstance(values, self._holder):
-            values = self._holder(values)
+        if isinstance(values, ABCSeries):
+            values = values._values
 
         if dtype is not None:
             if isinstance(dtype, compat.string_types):

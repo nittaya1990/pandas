@@ -562,6 +562,12 @@ class DatetimeTZDtype(PandasExtensionDtype):
         except ValueError:
             raise TypeError("could not construct DatetimeTZDtype")
 
+    @classmethod
+    def construct_array_type(cls):
+        from pandas.core.arrays.datetimetz import DatetimeTZArray
+
+        return DatetimeTZArray
+
     def __unicode__(self):
         return self.name
 
