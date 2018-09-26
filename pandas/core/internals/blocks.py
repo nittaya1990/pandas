@@ -2899,6 +2899,7 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
     __slots__ = ()
     _concatenator = staticmethod(_concat._concat_datetime)
     is_datetimetz = True
+    is_extension = True  # TODO: remove
 
     def __init__(self, values, placement, ndim=2, dtype=None):
         # XXX: This will end up calling _maybe_coerce_values twice

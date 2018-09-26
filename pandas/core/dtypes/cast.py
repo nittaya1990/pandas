@@ -998,7 +998,6 @@ def maybe_cast_to_datetime(value, dtype, errors='raise'):
     """
     from pandas.core.tools.timedeltas import to_timedelta
     from pandas.core.tools.datetimes import to_datetime
-    import pdb; pdb.set_trace()
 
     if dtype is not None:
         if isinstance(dtype, string_types):

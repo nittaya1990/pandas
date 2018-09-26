@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from pandas.core.arrays import ExtensionArray
@@ -28,11 +30,11 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
 
     @classmethod
     def _simple_new(cls, values, **kwargs):
-        return to_array(values, tz=kwargs.get('tz', None))
+        return to_datetimetz_array(values, tz=kwargs.get('tz', None))
 
     @classmethod
     def from_array(cls, values, tz):
-        values = to_array(values)
+        values = to_datetimetz_array(values)
         return cls(values, tz)
 
     @property
@@ -50,7 +52,7 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
     def _from_sequence(cls, scalars, dtype=None, copy=False):
         if dtype is None:
             dtype = DatetimeTZDtype('ns', scalars[0].tz)
-        return to_array(scalars, tz=dtype.tz)
+        return to_datetimetz_array(scalars, tz=dtype.tz)
 
     @classmethod
     def _from_factorized(cls, values, original):
@@ -67,7 +69,6 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
     def nbytes(self):
         return self._data.nbytes
 
-    @property
     def isna(self):
         from pandas.core.missing import isna
         return isna(self._data)
@@ -101,7 +102,11 @@ class DatetimeTZArray(ExtensionArray, DatetimeLikeArrayMixin):
         return cls(np.concatenate(to_concat), dtype=dtype)
 
 
-def to_array(values, tz=None):
-    values = np.asarray(values, dtype='datetime64[ns]')
+def to_datetimetz_array(values, tz=None):
+    with warnings.catch_warnings():
+        # XXX: figure out how to infer / tz from values
+        warnings.simplefilter("ignore", DeprecationWarning)
+        values = np.asarray(values, dtype='datetime64[ns]')
+
     dtype = DatetimeTZDtype('ns', tz=tz)
     return DatetimeTZArray(values, dtype=dtype)

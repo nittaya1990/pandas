@@ -477,7 +477,7 @@ class DatetimeTZDtypeType(type):
     pass
 
 
-class DatetimeTZDtype(PandasExtensionDtype):
+class DatetimeTZDtype(ExtensionDtype):
 
     """
     A np.dtype duck-typed class, suitable for holding a custom datetime with tz

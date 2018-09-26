@@ -4225,6 +4225,10 @@ def _sanitize_array(data, index, dtype=None, copy=False,
             if is_float_dtype(dtype) or is_integer_dtype(dtype):
                 subarr = maybe_cast_to_integer_array(arr, dtype)
 
+            if is_datetime64tz_dtype(dtype):
+                from pandas.core.arrays.datetimetz import to_datetimetz_array
+                return to_datetimetz_array(arr, tz=dtype.tz)
+
             subarr = maybe_cast_to_datetime(arr, dtype)
             # Take care in creating object arrays (but iterators are not
             # supported):
@@ -4300,7 +4304,7 @@ def _sanitize_array(data, index, dtype=None, copy=False,
         else:
             subarr = maybe_convert_platform(data)
 
-        subarr = maybe_cast_to_datetime(subarr, dtype)
+        # subarr = maybe_cast_to_datetime(subarr, dtype)
 
     elif isinstance(data, range):
         # GH 16804
