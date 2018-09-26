@@ -563,12 +563,11 @@ class DatetimeTZDtype(PandasExtensionDtype):
             raise TypeError("could not construct DatetimeTZDtype")
 
     def __unicode__(self):
-        # format the tz
-        return "datetime64[{unit}, {tz}]".format(unit=self.unit, tz=self.tz)
+        return self.name
 
     @property
     def name(self):
-        return str(self)
+        return "datetime64[{unit}, {tz}]".format(unit=self.unit, tz=self.tz)
 
     def __hash__(self):
         # make myself hashable
