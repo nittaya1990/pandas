@@ -176,15 +176,15 @@ class SparseSeries(Series):
     @property
     def values(self):
         """ return the array """
-        return self.block.values
+        return self._values
 
     def __array__(self, result=None):
         """ the array interface, return my values """
-        return self.block.values
+        return self.values
 
     def get_values(self):
         """ same as values """
-        return self.block.to_dense().view()
+        return self.values.to_dense().view()
 
     @property
     def block(self):
@@ -192,15 +192,15 @@ class SparseSeries(Series):
 
     @property
     def fill_value(self):
-        return self.block.fill_value
+        return self.values.fill_value
 
     @fill_value.setter
     def fill_value(self, v):
-        self.block.fill_value = v
+        self.values.fill_value = v
 
     @property
     def sp_index(self):
-        return self.block.sp_index
+        return self.values.sp_index
 
     @property
     def sp_values(self):
@@ -251,7 +251,7 @@ class SparseSeries(Series):
                            fill_value=fill_value, kind=kind, copy=copy)
 
     def __len__(self):
-        return len(self.block)
+        return len(self.values)
 
     @property
     def shape(self):
@@ -356,7 +356,7 @@ class SparseSeries(Series):
 
     def _get_val_at(self, loc):
         """ forward to the array """
-        return self.block.values._get_val_at(loc)
+        return self.values._get_val_at(loc)
 
     def __getitem__(self, key):
         try:
@@ -586,7 +586,7 @@ class SparseSeries(Series):
         if not isinstance(new_index, splib.SparseIndex):
             raise TypeError('new index must be a SparseIndex')
 
-        block = self.block.sparse_reindex(new_index)
+        block = self.values.sparse_reindex(new_index)
         new_data = SingleBlockManager(block, self.index)
         return self._constructor(new_data, index=self.index,
                                  sparse_index=new_index,

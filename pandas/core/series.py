@@ -1393,7 +1393,7 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
             container = SparseSeries
         else:
             array = SparseExtensionArray
-            container = SparseSeries
+            container = type(self)
 
         values = array(self, kind=kind, fill_value=fill_value)
         return container(
