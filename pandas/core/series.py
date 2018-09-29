@@ -1369,7 +1369,7 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
 
         return df
 
-    def to_sparse(self, kind='block', fill_value=None):
+    def to_sparse(self, kind='block', fill_value=None, mode=None):
         """
         Convert Series to SparseSeries
 
@@ -1385,9 +1385,18 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
         # TODO: deprecate
         from pandas.core.sparse.series import SparseSeries
         from pandas.core.sparse.array import SparseArray
+        from pandas.core.arrays import SparseExtensionArray
 
-        values = SparseArray(self, kind=kind, fill_value=fill_value)
-        return SparseSeries(
+        if mode is None:
+            warnings.warn("sparse")
+            array = SparseArray
+            container = SparseSeries
+        else:
+            array = SparseExtensionArray
+            container = SparseSeries
+
+        values = array(self, kind=kind, fill_value=fill_value)
+        return container(
             values, index=self.index, name=self.name
         ).__finalize__(self)
 
