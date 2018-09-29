@@ -3,4 +3,3 @@
 from pandas.core.sparse.array import SparseArray
 from pandas.core.sparse.series import SparseSeries
 from pandas.core.sparse.frame import SparseDataFrame
-from pandas.core.sparse.dtype import SparseDtype
