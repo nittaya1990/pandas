@@ -13,6 +13,7 @@ from pandas._libs import (
 from pandas._libs.tslibs import (
     ccalendar, conversion, fields, parsing, timezones)
 import pandas.compat as compat
+from pandas.core.accessor import delegate_names
 from pandas.util._decorators import Appender, Substitution, cache_readonly
 
 from pandas.core.dtypes.common import (
@@ -31,8 +32,8 @@ from pandas.core.base import _shared_docs
 import pandas.core.common as com
 from pandas.core.indexes.base import Index, _index_shared_docs
 from pandas.core.indexes.datetimelike import (
-    DatelikeOps, DatetimeIndexOpsMixin, TimelikeOps, wrap_array_method,
-    wrap_field_accessor)
+    DatetimeIndexOpsMixin, wrap_array_method,
+    wrap_field_accessor, DatelikeIndexMixin, DatetimelikeDelegateMixin)
 from pandas.core.indexes.numeric import Int64Index
 from pandas.core.ops import get_op_result_name
 import pandas.core.tools.datetimes as tools
@@ -56,8 +57,20 @@ def _new_DatetimeIndex(cls, d):
     return result
 
 
-class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
-                    DatetimeIndexOpsMixin, Int64Index):
+class DatetimeDelegateMixin(DatetimelikeDelegateMixin):
+    _delegate_class = DatetimeArray
+
+
+@delegate_names(DatetimeArray,
+                DatetimeArray._datetimelike_ops,
+                typ="property")
+@delegate_names(DatetimeArray,
+                DatetimeArray._datetimelike_methods,
+                typ="method", overwrite=True)
+class DatetimeIndex(DatelikeIndexMixin,
+                    DatetimeIndexOpsMixin,
+                    Int64Index,
+                    DatetimeDelegateMixin):
     """
     Immutable ndarray of datetime64 data, represented internally as int64, and
     which can be boxed to Timestamp objects that are subclasses of datetime and
@@ -193,24 +206,6 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
     # dummy attribute so that datetime.__eq__(DatetimeArray) defers
     # by returning NotImplemented
     timetuple = None
-
-    # define my properties & methods for delegation
-    _bool_ops = ['is_month_start', 'is_month_end',
-                 'is_quarter_start', 'is_quarter_end', 'is_year_start',
-                 'is_year_end', 'is_leap_year']
-    _object_ops = ['weekday_name', 'freq', 'tz']
-    _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
-                  'weekofyear', 'week', 'weekday', 'dayofweek',
-                  'dayofyear', 'quarter', 'days_in_month',
-                  'daysinmonth', 'microsecond',
-                  'nanosecond']
-    _other_ops = ['date', 'time', 'timetz']
-    _datetimelike_ops = _field_ops + _object_ops + _bool_ops + _other_ops
-    _datetimelike_methods = ['to_period', 'tz_localize',
-                             'tz_convert',
-                             'normalize', 'strftime', 'round', 'floor',
-                             'ceil', 'month_name', 'day_name']
-
     _is_numeric_dtype = False
     _infer_as_myclass = True
 

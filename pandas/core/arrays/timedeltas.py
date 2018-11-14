@@ -109,6 +109,14 @@ def _td_array_cmp(cls, op):
 
 class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
     _typ = "timedeltaarray"
+    # define my properties & methods for delegation
+    _other_ops = []
+    _bool_ops = []
+    _object_ops = ['freq']
+    _field_ops = ['days', 'seconds', 'microseconds', 'nanoseconds']
+    _datetimelike_ops = _field_ops + _object_ops + _bool_ops
+    _datetimelike_methods = ["to_pytimedelta", "total_seconds",
+                             "round", "floor", "ceil"]
 
     @property
     def _box_func(self):

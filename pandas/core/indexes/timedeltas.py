@@ -14,6 +14,7 @@ from pandas.core.dtypes.common import (
 import pandas.core.dtypes.concat as _concat
 from pandas.core.dtypes.missing import isna
 
+from pandas.core.accessor import delegate_names
 from pandas.core.arrays import datetimelike as dtl
 from pandas.core.arrays.timedeltas import (
     TimedeltaArrayMixin as TimedeltaArray, _is_convertible_to_td, _to_m8,
@@ -22,8 +23,8 @@ from pandas.core.base import _shared_docs
 import pandas.core.common as com
 from pandas.core.indexes.base import Index, _index_shared_docs
 from pandas.core.indexes.datetimelike import (
-    DatetimeIndexOpsMixin, TimelikeOps, wrap_arithmetic_op, wrap_array_method,
-    wrap_field_accessor)
+    DatetimeIndexOpsMixin, DatetimelikeDelegateMixin, wrap_arithmetic_op,
+    wrap_array_method, wrap_field_accessor)
 from pandas.core.indexes.numeric import Int64Index
 from pandas.core.ops import get_op_result_name
 from pandas.core.tools.timedeltas import _coerce_scalar_to_timedelta_type
@@ -31,8 +32,19 @@ from pandas.core.tools.timedeltas import _coerce_scalar_to_timedelta_type
 from pandas.tseries.frequencies import to_offset
 
 
-class TimedeltaIndex(TimedeltaArray, DatetimeIndexOpsMixin,
-                     TimelikeOps, Int64Index):
+class TimedeltaDelegateMixin(DatetimelikeDelegateMixin):
+    _delegate_class = TimedeltaArray
+
+
+@delegate_names(TimedeltaArray,
+                TimedeltaArray._datetimelike_ops,
+                typ="property")
+@delegate_names(TimedeltaArray,
+                TimedeltaArray._datetimelike_methods,
+                typ="method", overwrite=True)
+class TimedeltaIndex(TimedeltaDelegateMixin,
+                     DatetimeIndexOpsMixin,
+                     Int64Index):
     """
     Immutable ndarray of timedelta64 data, represented internally as int64, and
     which can be boxed to timedelta objects
@@ -108,15 +120,6 @@ class TimedeltaIndex(TimedeltaArray, DatetimeIndexOpsMixin,
     _left_indexer = _join_i8_wrapper(libjoin.left_join_indexer_int64)
     _left_indexer_unique = _join_i8_wrapper(
         libjoin.left_join_indexer_unique_int64, with_indexers=False)
-
-    # define my properties & methods for delegation
-    _other_ops = []
-    _bool_ops = []
-    _object_ops = ['freq']
-    _field_ops = ['days', 'seconds', 'microseconds', 'nanoseconds']
-    _datetimelike_ops = _field_ops + _object_ops + _bool_ops
-    _datetimelike_methods = ["to_pytimedelta", "total_seconds",
-                             "round", "floor", "ceil"]
 
     _engine_type = libindex.TimedeltaEngine
 
