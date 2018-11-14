@@ -687,7 +687,7 @@ class Index(IndexOpsMixin, PandasObject):
 
     def __array__(self, dtype=None):
         """ the array interface, return my values """
-        return self._data.view(np.ndarray)
+        return np.asarray(self._data, dtype=dtype)
 
     def __array_wrap__(self, result, context=None):
         """

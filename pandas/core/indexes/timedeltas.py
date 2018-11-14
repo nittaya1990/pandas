@@ -110,6 +110,8 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
 
     _typ = 'timedeltaindex'
     _join_precedence = 10
+    # TODO: dispatch
+    _generate_range = TimedeltaArray._generate_range
 
     def _join_i8_wrapper(joinf, **kwargs):
         return DatetimeIndexOpsMixin._join_i8_wrapper(

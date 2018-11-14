@@ -25,7 +25,7 @@ from pandas.core.dtypes.missing import isna
 
 from pandas.core import algorithms, ops
 from pandas.core.accessor import PandasDelegate
-from pandas.core.arrays import PeriodArray, ExtensionOpsMixin
+from pandas.core.arrays import ExtensionOpsMixin, PeriodArray
 from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin
 import pandas.core.indexes.base as ibase
 from pandas.core.indexes.base import Index, _index_shared_docs
@@ -156,6 +156,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
         """
         return object Index which contains boxed values
         """
+        # XXX: this is broken (not called) for PeriodIndex, which doesn't
+        # define _box_values AFAICT
         from pandas.core.index import Index
         return Index(self._box_values(self.asi8), name=self.name, dtype=object)
 
@@ -705,3 +707,7 @@ class DatelikeIndexMixin(object):
         # Can't simply use delegate_names since our base class is defining
         # freq
         return self._data.freq
+
+    @property
+    def freqstr(self):
+        return self._data.freq.freqstr

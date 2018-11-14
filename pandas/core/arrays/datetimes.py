@@ -209,6 +209,9 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         return result
 
     def __new__(cls, values, freq=None, tz=None, dtype=None):
+        if isinstance(values, (ABCSeries, ABCIndexClass)):
+            values = values._values
+
         if tz is None and hasattr(values, 'tz'):
             # e.g. DatetimeIndex
             tz = values.tz
@@ -317,7 +320,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         if not right_closed and len(index) and index[-1] == end:
             index = index[:-1]
 
-        return cls._simple_new(index.values, freq=freq, tz=tz)
+        return cls._simple_new(index.asi8, freq=freq, tz=tz)
 
     # -----------------------------------------------------------------
     # Descriptive Properties
@@ -389,12 +392,12 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
 
     def __array__(self, dtype=None):
         if is_object_dtype(dtype):
+            import pdb; pdb.set_trace
             return np.array(list(self), dtype=object)
         elif is_int64_dtype(dtype):
             return self.asi8
 
-        # TODO: warn that conversion may be lossy?
-        return self._data.view(np.ndarray)  # follow Index.__array__
+        return self._data
 
     def __iter__(self):
         """

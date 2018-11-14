@@ -13,7 +13,6 @@ from pandas._libs import (
 from pandas._libs.tslibs import (
     ccalendar, conversion, fields, parsing, timezones)
 import pandas.compat as compat
-from pandas.core.accessor import delegate_names
 from pandas.util._decorators import Appender, Substitution, cache_readonly
 
 from pandas.core.dtypes.common import (
@@ -25,6 +24,7 @@ import pandas.core.dtypes.concat as _concat
 from pandas.core.dtypes.generic import ABCSeries
 from pandas.core.dtypes.missing import isna
 
+from pandas.core.accessor import delegate_names
 from pandas.core.arrays import datetimelike as dtl
 from pandas.core.arrays.datetimes import (
     DatetimeArrayMixin as DatetimeArray, _to_m8)
@@ -32,8 +32,8 @@ from pandas.core.base import _shared_docs
 import pandas.core.common as com
 from pandas.core.indexes.base import Index, _index_shared_docs
 from pandas.core.indexes.datetimelike import (
-    DatetimeIndexOpsMixin, wrap_array_method,
-    wrap_field_accessor, DatelikeIndexMixin, DatetimelikeDelegateMixin)
+    DatelikeIndexMixin, DatetimeIndexOpsMixin, DatetimelikeDelegateMixin,
+    wrap_array_method, wrap_field_accessor)
 from pandas.core.indexes.numeric import Int64Index
 from pandas.core.ops import get_op_result_name
 import pandas.core.tools.datetimes as tools
@@ -185,6 +185,20 @@ class DatetimeIndex(DatelikeIndexMixin,
     """
     _typ = 'datetimeindex'
     _join_precedence = 10
+    # TODO: dispatch
+    @classmethod
+    def _generate_range(cls, start, end, periods, freq, tz=None,
+                        normalize=False, ambiguous="raise",
+                        closed=None):
+        return cls._simple_new(
+            DatetimeArray._generate_range(
+                start, end, periods, freq, tz=tz,
+                normalize=normalize, ambiguous=ambiguous,
+                closed=closed,
+            )
+        )
+    _box_func = DatetimeArray._box_func
+    _box_values = DatetimeArray._box_values
 
     def _join_i8_wrapper(joinf, **kwargs):
         return DatetimeIndexOpsMixin._join_i8_wrapper(joinf, dtype='M8[ns]',
@@ -321,7 +335,8 @@ class DatetimeIndex(DatelikeIndexMixin,
         if we are passed a non-dtype compat, then coerce using the constructor
         """
         # DatetimeArray._simple_new will accept either i8 or M8[ns] dtypes
-        assert isinstance(values, np.ndarray), type(values)
+        values = DatetimeArray(values, dtype=dtype, freq=freq, tz=tz)
+        # assert isinstance(values, np.ndarray), type(values)
 
         result = super(DatetimeIndex, cls)._simple_new(values, freq, tz,
                                                        **kwargs)
@@ -329,16 +344,14 @@ class DatetimeIndex(DatelikeIndexMixin,
         result._reset_identity()
         return result
 
+    @property
+    def values(self):
+        return self._data._data
     # --------------------------------------------------------------------
 
     @property
     def _values(self):
-        # tz-naive -> ndarray
-        # tz-aware -> DatetimeIndex
-        if self.tz is not None:
-            return self
-        else:
-            return self.values
+        return self._data
 
     @property
     def tz(self):

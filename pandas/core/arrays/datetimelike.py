@@ -43,7 +43,7 @@ from pandas.core.dtypes.missing import isna
 import pandas.core.common as com
 from pandas.core.algorithms import checked_add_with_arr
 
-from .base import ExtensionOpsMixin
+from .base import ExtensionOpsMixin, ExtensionArray
 from pandas.util._decorators import deprecate_kwarg
 
 
@@ -270,7 +270,7 @@ class TimelikeOps(object):
         return self._round(freq, RoundTo.PLUS_INFTY, ambiguous, nonexistent)
 
 
-class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps, AttributesMixin):
+class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps, AttributesMixin, ExtensionArray):
     """
     Shared Base/Mixin class for DatetimeArray, TimedeltaArray, PeriodArray
 
