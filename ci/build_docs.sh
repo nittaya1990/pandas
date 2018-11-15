@@ -8,6 +8,10 @@ fi
 cd "$TRAVIS_BUILD_DIR"/doc
 echo "inside $0"
 
+# Fetch our previous tag so that we can build the contributors
+# This tag has to be manually incremented
+git fetch origin refs/tags/v0.23.4:refs/tags/v0.23.4
+
 if [ "$DOC" ]; then
 
     echo "Will build docs"
