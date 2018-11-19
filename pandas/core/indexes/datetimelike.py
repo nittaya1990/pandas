@@ -13,10 +13,8 @@ from pandas.errors import AbstractMethodError
 from pandas.util._decorators import Appender, cache_readonly, deprecate_kwarg
 
 from pandas.core.dtypes.common import (
-    ensure_int64, is_bool_dtype, is_categorical_dtype,
-    is_datetime_or_timedelta_dtype, is_dtype_equal, is_float, is_float_dtype,
-    is_integer, is_integer_dtype, is_list_like, is_object_dtype,
-    is_period_dtype, is_scalar, is_string_dtype)
+    ensure_int64, is_bool_dtype, is_dtype_equal, is_float, is_integer,
+    is_list_like, is_period_dtype, is_scalar)
 from pandas.core.dtypes.generic import ABCIndex, ABCIndexClass, ABCSeries
 from pandas.core.dtypes.missing import isna
 
@@ -50,6 +48,9 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     hasnans = cache_readonly(DatetimeLikeArrayMixin.hasnans.fget)
     _resolution = cache_readonly(DatetimeLikeArrayMixin._resolution.fget)
     resolution = cache_readonly(DatetimeLikeArrayMixin.resolution.fget)
+
+    # A few methods that are shared
+    _maybe_mask_results = DatetimeLikeArrayMixin._maybe_mask_results
 
     @classmethod
     def _create_comparison_method(cls, op):
@@ -122,36 +123,13 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _ensure_localized(self, arg, ambiguous='raise', nonexistent='raise',
                           from_utc=False):
-        """
-        ensure that we are re-localized
-
-        This is for compat as we can then call this on all datetimelike
-        indexes generally (ignored for Period/Timedelta)
-
-        Parameters
-        ----------
-        arg : DatetimeIndex / i8 ndarray
-        ambiguous : str, bool, or bool-ndarray, default 'raise'
-        nonexistent : str, default 'raise'
-        from_utc : bool, default False
-            If True, localize the i8 ndarray to UTC first before converting to
-            the appropriate tz. If False, localize directly to the tz.
-
-        Returns
-        -------
-        localized DTI
-        """
-
-        # reconvert to local tz
-        if getattr(self, 'tz', None) is not None:
-            if not isinstance(arg, ABCIndexClass):
-                arg = self._simple_new(arg)
-            if from_utc:
-                arg = arg.tz_localize('UTC').tz_convert(self.tz)
-            else:
-                arg = arg.tz_localize(
-                    self.tz, ambiguous=ambiguous, nonexistent=nonexistent
-                )
+        tz = getattr(self, 'tz', None)
+        # TODO: some things around boxing...
+        if tz is not None:
+            arg = self._values._ensure_localized(arg, ambiguous=ambiguous,
+                                                 nonexistent=nonexistent,
+                                                 from_utc=from_utc)
+            arg = self._simple_new(arg)
         return arg
 
     def _box_values_as_index(self):
@@ -165,6 +143,27 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _format_with_header(self, header, **kwargs):
         return header + list(self._format_native_types(**kwargs))
+
+    def _deepcopy_if_needed(self, orig, copy=False):
+        # TODO: is this the right class?
+        # Override Index._deepcopy_if_needed, since _data is not an ndarray.
+        # what is orig here? ndarray or DatetimeArray, DatetimeIndex?
+        if copy:
+            if not isinstance(orig, np.ndarray):
+                # orig is a DatetimeIndex
+                orig = orig._data
+            orig = orig if orig.base is None else orig.base
+            own_data = self._data
+
+            if own_data._data.base is None:
+                new = own_data._data
+            else:
+                new = own_data._data.base
+
+            if orig is new:
+                return self.copy(deep=True)
+
+        return self
 
     @Appender(_index_shared_docs['__contains__'] % _index_doc_kwargs)
     def __contains__(self, key):
@@ -548,25 +547,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def astype(self, dtype, copy=True):
         new_values = self._values.astype(dtype, copy=copy)
-        return Index(new_values)
-
-        if is_object_dtype(dtype):
-            return self._box_values_as_index()
-        elif is_string_dtype(dtype) and not is_categorical_dtype(dtype):
-            return Index(self.format(), name=self.name, dtype=object)
-        elif is_integer_dtype(dtype):
-            # TODO(DatetimeArray): use self._values here.
-            # Can't use ._values currently, because that returns a
-            # DatetimeIndex, which throws us in an infinite loop.
-            return Index(self.values.astype('i8', copy=copy), name=self.name,
-                         dtype='i8')
-        elif (is_datetime_or_timedelta_dtype(dtype) and
-              not is_dtype_equal(self.dtype, dtype)) or is_float_dtype(dtype):
-            # disallow conversion between datetime/timedelta,
-            # and conversions for any datetimelike to float
-            msg = 'Cannot cast {name} to dtype {dtype}'
-            raise TypeError(msg.format(name=type(self).__name__, dtype=dtype))
-        return super(DatetimeIndexOpsMixin, self).astype(dtype, copy=copy)
+        return Index(new_values, dtype=dtype)
 
     @deprecate_kwarg(old_arg_name='n', new_arg_name='periods')
     def shift(self, periods, freq=None):
@@ -608,9 +589,6 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _has_same_tz(self, other):
         return self._data._has_same_tz(other)
-
-    _maybe_mask_results = DatetimeLikeArrayMixin._maybe_mask_results
-    _validate_frequency = DatetimeLikeArrayMixin._validate_frequency
 
 
 def _ensure_datetimelike_to_i8(other, to_utc=False):
@@ -720,6 +698,11 @@ def wrap_field_accessor(prop):
 
 
 class DatetimelikeDelegateMixin(PandasDelegate):
+    # raw_methods : dispatch methods that shouldn't be boxed in an Index
+    _raw_methods = set()
+    # raw_properties : dispatch properties that shouldn't be boxed in an Index
+    _raw_properties = set()
+
     @property
     def _delegate_class(self):
         raise AbstractMethodError
@@ -729,7 +712,7 @@ class DatetimelikeDelegateMixin(PandasDelegate):
         box_ops = (
             set(self._delegate_class._datetimelike_ops) -
             set(self._delegate_class._bool_ops)
-        )
+        ) - self._raw_properties
         if name in box_ops:
             result = Index(result, name=self.name)
         return result
@@ -739,7 +722,9 @@ class DatetimelikeDelegateMixin(PandasDelegate):
 
     def _delegate_method(self, name, *args, **kwargs):
         result = operator.methodcaller(name, *args, **kwargs)(self._data)
-        return Index(result, name=self.name)
+        if name not in self._raw_methods:
+            result = Index(result, name=self.name)
+        return result
 
 
 class DatelikeIndexMixin(object):
@@ -750,6 +735,10 @@ class DatelikeIndexMixin(object):
         # Can't simply use delegate_names since our base class is defining
         # freq
         return self._data.freq
+
+    @freq.setter
+    def freq(self, value):
+        self._data.freq = value
 
     @property
     def freqstr(self):

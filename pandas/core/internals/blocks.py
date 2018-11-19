@@ -2708,6 +2708,8 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         these automatically copy, so copy=True has no effect
         raise on an except if raise == True
         """
+        # TODO: I think that most of this can be dispatched to the
+        # values and removed.
 
         # if we are passed a datetime64[ns, tz]
         if is_datetime64tz_dtype(dtype):
@@ -2794,8 +2796,9 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         from pandas.io.formats.format import _get_format_datetime64_from_values
         format = _get_format_datetime64_from_values(values, date_format)
 
+        # Note: changed from .view('i8') since values is now a DatetimeArray
         result = tslib.format_array_from_datetime(
-            values.view('i8').ravel(), tz=getattr(self.values, 'tz', None),
+            values.asi8.ravel(), tz=getattr(self.values, 'tz', None),
             format=format, na_rep=na_rep).reshape(values.shape)
         return np.atleast_2d(result)
 

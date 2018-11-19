@@ -21,7 +21,8 @@ from pandas.core.dtypes.common import (
     is_object_dtype,
     is_int64_dtype,
     is_datetime64tz_dtype,
-    is_datetime64_dtype)
+    is_datetime64_dtype, is_datetime64_ns_dtype, is_dtype_equal,
+    is_period_dtype, pandas_dtype)
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pandas.core.dtypes.missing import isna
 from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
@@ -205,11 +206,17 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         result._data = values
         result._freq = freq
         tz = timezones.maybe_get_tz(tz)
-        result._tz = timezones.tz_standardize(tz)
-        result._dtype = DatetimeTZDtype('ns', tz)
+        if tz:
+            result._tz = timezones.tz_standardize(tz)
+            result._dtype = DatetimeTZDtype('ns', tz)
+        else:
+            result._dtype = values.dtype  # M8[ns]
         return result
 
-    def __new__(cls, values, freq=None, tz=None, dtype=None):
+    def __new__(cls, values=None, freq=None, tz=None, dtype=None):
+        if values is None:
+            # pickle compat. change to init and remove
+            values = np.array([], dtype='M8[ns]')
         if isinstance(values, (ABCSeries, ABCIndexClass)):
             values = values._values
 
@@ -958,6 +965,24 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         i8delta = self.asi8 - self.to_period(freq).to_timestamp().asi8
         m8delta = i8delta.view('m8[ns]')
         return TimedeltaArrayMixin(m8delta)
+
+    def astype(self, dtype, copy=True):
+        # We handle
+        #   - datetime -> datetime
+        #   - datetime -> period
+        # Super handles the rest.
+        dtype = pandas_dtype(dtype)
+
+        if (is_datetime64_ns_dtype(dtype) and
+                not is_dtype_equal(dtype, self.dtype)):
+            # GH 18951: datetime64_ns dtype but not equal means different tz
+            new_tz = getattr(dtype, 'tz', None)
+            if getattr(self.dtype, 'tz', None) is None:
+                return self.tz_localize(new_tz)
+            return self.tz_convert(new_tz)
+        elif is_period_dtype(dtype):
+            return self.to_period(freq=dtype.freq)
+        return super(DatetimeArrayMixin, self).astype(dtype, copy)
 
     # -----------------------------------------------------------------
     # Properties - Vectorized Timestamp Properties/Methods

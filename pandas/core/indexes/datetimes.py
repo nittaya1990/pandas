@@ -16,10 +16,9 @@ import pandas.compat as compat
 from pandas.util._decorators import Appender, Substitution, cache_readonly
 
 from pandas.core.dtypes.common import (
-    _INT64_DTYPE, _NS_DTYPE, ensure_int64, is_datetime64_dtype,
-    is_datetime64_ns_dtype, is_datetimetz, is_dtype_equal, is_float,
-    is_integer, is_integer_dtype, is_list_like, is_period_dtype, is_scalar,
-    is_string_like, pandas_dtype)
+    _INT64_DTYPE, _NS_DTYPE, ensure_int64, is_datetime64_dtype, is_datetimetz,
+    is_dtype_equal, is_float, is_integer, is_integer_dtype, is_list_like,
+    is_scalar, is_string_like)
 import pandas.core.dtypes.concat as _concat
 from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
 from pandas.core.dtypes.missing import isna
@@ -58,6 +57,11 @@ def _new_DatetimeIndex(cls, d):
 
 
 class DatetimeDelegateMixin(DatetimelikeDelegateMixin):
+    _raw_properties = {
+        'date',
+        'time',
+        'timetz',
+    }
     _delegate_class = DatetimeArray
 
 
@@ -227,6 +231,9 @@ class DatetimeIndex(DatelikeIndexMixin,
     # some things like freq inference make use of these attributes.
     _bool_ops = DatetimeArray._bool_ops
     _object_ops = DatetimeArray._object_ops
+    _local_timestamps = DatetimeArray._local_timestamps
+    _validate_frequency = DatetimeArray._validate_frequency
+    to_pydatetime = DatetimeArray.to_pydatetime
 
     # --------------------------------------------------------------------
     # Constructors
@@ -367,13 +374,17 @@ class DatetimeIndex(DatelikeIndexMixin,
     @property
     def tz(self):
         # GH 18595
-        return self.dtype.tz
+        return self._data.tz
 
     @tz.setter
     def tz(self, value):
         # GH 3746: Prevent localizing or converting the index by setting tz
         raise AttributeError("Cannot directly set timezone. Use tz_localize() "
                              "or tz_convert() as appropriate")
+
+    @property
+    def tzinfo(self):
+        return self._data.tzinfo
 
     @property
     def size(self):
@@ -479,17 +490,8 @@ class DatetimeIndex(DatelikeIndexMixin,
 
     @Appender(_index_shared_docs['astype'])
     def astype(self, dtype, copy=True):
-        dtype = pandas_dtype(dtype)
-        if (is_datetime64_ns_dtype(dtype) and
-                not is_dtype_equal(dtype, self.dtype)):
-            # GH 18951: datetime64_ns dtype but not equal means different tz
-            new_tz = getattr(dtype, 'tz', None)
-            if getattr(self.dtype, 'tz', None) is None:
-                return self.tz_localize(new_tz)
-            return self.tz_convert(new_tz)
-        elif is_period_dtype(dtype):
-            return self.to_period(freq=dtype.freq)
-        return super(DatetimeIndex, self).astype(dtype, copy=copy)
+        new_values = self._data.astype(dtype)
+        return Index(new_values, name=self.name, dtype=dtype, copy=copy)
 
     def _get_time_micros(self):
         values = self.asi8
@@ -771,6 +773,9 @@ class DatetimeIndex(DatelikeIndexMixin,
 
     def _wrap_setop_result(self, other, result):
         name = get_op_result_name(self, other)
+        if isinstance(result, list):
+            # this feels like the wrong place
+            result = type(self)(result, copy=False, name=name, tz=self.tz)
         if not timezones.tz_compare(self.tz, other.tz):
             raise ValueError('Passed item and index have different timezone')
         return self._shallow_copy(result, name=name, freq=None, tz=self.tz)

@@ -18,18 +18,13 @@ from pandas.util._decorators import cache_readonly, Appender
 from pandas.util._validators import validate_fillna_kwargs
 import pandas.core.algorithms as algos
 from pandas.core.dtypes.common import (
-    is_integer_dtype, is_float_dtype, is_period_dtype,
+    is_float_dtype, is_period_dtype,
     pandas_dtype,
     is_datetime64_dtype,
-    is_categorical_dtype,
     is_array_like,
-    is_object_dtype,
-    is_string_dtype,
-    is_datetime_or_timedelta_dtype,
-    is_dtype_equal,
     ensure_object,
     _TD_DTYPE,
-)
+    is_datetime64tz_dtype)
 from pandas.core.dtypes.dtypes import PeriodDtype
 from pandas.core.dtypes.generic import (
     ABCSeries, ABCIndexClass, ABCPeriodIndex
@@ -553,42 +548,12 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
         return type(self)(values, self.freq)
 
     def astype(self, dtype, copy=True):
-        # TODO: Figure out something better here...
-        # We have DatetimeLikeArrayMixin ->
-        #     super(...), which ends up being... DatetimeIndexOpsMixin?
-        # this is complicated.
-        # need a pandas_astype(arr, dtype).
-        from pandas import Categorical
-
         dtype = pandas_dtype(dtype)
 
-        if is_object_dtype(dtype):
-            return np.asarray(self, dtype=object)
-        elif is_string_dtype(dtype) and not is_categorical_dtype(dtype):
-            return self._format_native_types()
-        elif is_integer_dtype(dtype):
-            values = self._data
-
-            if values.dtype != dtype:
-                # int32 vs. int64
-                values = values.astype(dtype)
-
-            elif copy:
-                values = values.copy()
-
-            return values
-        elif (is_datetime_or_timedelta_dtype(dtype) and
-              not is_dtype_equal(self.dtype, dtype)) or is_float_dtype(dtype):
-            # disallow conversion between datetime/timedelta,
-            # and conversions for any datetimelike to float
-            msg = 'Cannot cast {name} to dtype {dtype}'
-            raise TypeError(msg.format(name=type(self).__name__, dtype=dtype))
-        elif is_categorical_dtype(dtype):
-            return Categorical(self, dtype=dtype)
-        elif is_period_dtype(dtype):
+        if is_period_dtype(dtype):
+            # TODO: check if asfreq copies
             return self.asfreq(dtype.freq)
-        else:
-            return np.asarray(self, dtype=dtype)
+        return super(PeriodArray, self).astype(dtype, copy=copy)
 
     @property
     def flags(self):
@@ -891,7 +856,7 @@ def dt64arr_to_periodarr(data, freq, tz=None):
         # first, get undeclared things
         if freq is None:
             freq = data._values.freq
-        if tz is None:
+        if tz is None and is_datetime64tz_dtype(data._values.dtype):
             tz = data._values.dtype.tz
 
         data = data._values

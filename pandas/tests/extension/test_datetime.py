@@ -8,7 +8,8 @@ from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
 from pandas.tests.extension import base
 
 
-@pytest.fixture(params=[None, "US/Central"])
+# TODO: figure out a way to test non-TZ
+@pytest.fixture(params=["US/Central"])
 def dtype(request):
     return DatetimeTZDtype(unit="ns", tz=request.param)
 

@@ -35,7 +35,8 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
     is_period_dtype,
     is_timedelta64_dtype,
-    is_object_dtype)
+    is_object_dtype, is_string_dtype, is_categorical_dtype,
+    is_datetime_or_timedelta_dtype, is_dtype_equal)
 from pandas.core.dtypes.generic import ABCSeries, ABCDataFrame, ABCIndexClass
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pandas.core.dtypes.missing import isna
@@ -252,7 +253,7 @@ class TimelikeOps(object):
         if 'tz' in attribs:
             attribs['tz'] = None
         return self._ensure_localized(
-            self._shallow_copy(result, **attribs), ambiguous, nonexistent
+            self._simple_new(result, **attribs), ambiguous, nonexistent
         )
 
     @Appender((_round_doc + _round_example).format(op="round"))
@@ -313,6 +314,40 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
         apply box func to passed values
         """
         return lib.map_infer(values, self._box_func)
+
+    def _ensure_localized(self, arg, ambiguous="raise", nonexistent="raise",
+                          from_utc=False):
+        """
+        ensure that we are re-localized
+
+        This is for compat as we can then call this on all datetimelike
+        arrays generally (ignored for Period/Timedelta)
+
+        Parameters
+        ----------
+        arg : Unoin[DatetimeLikeArray, DatetimeIndexOpsMixin, ndarray]
+        ambiguous : str, bool, or bool-ndarray, default 'raise'
+        nonexistent : str, default 'raise'
+        from_utc : bool, default False
+            If True, localize the i8 ndarray to UTC first before converting to
+            the appropriate tz. If False, localize directly to the tz.
+
+        Returns
+        -------
+        localized DTI
+        """
+        # reconvert to local tz
+        tz = getattr(self, 'tz', None)
+        if tz is not None:
+            if not isinstance(arg, type(self)):
+                arg = self._simple_new(arg)
+            if from_utc:
+                arg = arg.tz_localize('UTC').tz_convert(tz)
+            else:
+                arg = arg.tz_localize(
+                    tz, ambiguous=ambiguous, nonexistent=nonexistent
+                )
+        return arg
 
     def __iter__(self):
         return (self._box_func(v) for v in self.asi8)
@@ -439,15 +474,36 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
         raise AbstractMethodError(self)
 
     def astype(self, dtype, copy=True):
-        # TODO: DatetimeIndex.astype had many special cases
-        # 1. object_dtype -> _box_values_as_index
-        # 2. string & not cat -> self.format
-        # 3. datetime/timedelta -> TypeError
-        # 4. super for the rest.
-        # So we'll need to move those special cases down to DatetimeArray
+        # Some notes on cases we don't have to handle:
+        #   1. PeriodArray.astype handles period -> period
+        #   2. DatetimeArray.astype handles conversion between tz.
+        #   3. DatetimeArray.astype handles datetime -> period
+        from pandas import Categorical
+        dtype = pandas_dtype(dtype)
+        # TODO: handle PeriodDtype, perhaps other EAs.
+
         if is_object_dtype(dtype):
             return self._box_values(self.asi8)
-        return super(DatetimeLikeArrayMixin, self).astype(dtype, copy)
+        elif is_string_dtype(dtype) and not is_categorical_dtype(dtype):
+            return self._format_native_types()
+            # return Index(self.format(), name=self.name, dtype=object)
+        elif is_integer_dtype(dtype):
+            values = self.asi8
+            if values.dtype != dtype:
+                values = values.astype(dtype)
+            elif copy:
+                values = values.copy()
+            return values
+        elif (is_datetime_or_timedelta_dtype(dtype) and
+              not is_dtype_equal(self.dtype, dtype)) or is_float_dtype(dtype):
+            # disallow conversion between datetime/timedelta,
+            # and conversions for any datetimelike to float
+            msg = 'Cannot cast {name} to dtype {dtype}'
+            raise TypeError(msg.format(name=type(self).__name__, dtype=dtype))
+        elif is_categorical_dtype(dtype):
+            return Categorical(self, dtype=dtype)
+        else:
+            return np.asarray(self, dtype=dtype)
 
     def _format_native_types(self):
         """
