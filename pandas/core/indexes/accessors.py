@@ -14,7 +14,11 @@ from pandas.core.dtypes.common import (
 from pandas.core.accessor import PandasDelegate, delegate_names
 from pandas.core.base import NoNewAttributesMixin, PandasObject
 from pandas.core.indexes.datetimes import DatetimeIndex
-from pandas.core.indexes.period import PeriodArray
+from pandas.core.arrays import (
+    PeriodArray,
+    DatetimeArrayMixin as DatetimeArray,
+    TimedeltaArrayMixin as TimedeltaArray,
+)
 from pandas.core.indexes.timedeltas import TimedeltaIndex
 from pandas.core.algorithms import take_1d
 
@@ -110,11 +114,11 @@ class Properties(PandasDelegate, PandasObject, NoNewAttributesMixin):
         return result
 
 
-@delegate_names(delegate=DatetimeIndex,
-                accessors=DatetimeIndex._datetimelike_ops,
+@delegate_names(delegate=DatetimeArray,
+                accessors=DatetimeArray._datetimelike_ops,
                 typ="property")
-@delegate_names(delegate=DatetimeIndex,
-                accessors=DatetimeIndex._datetimelike_methods,
+@delegate_names(delegate=DatetimeArray,
+                accessors=DatetimeArray._datetimelike_methods,
                 typ="method")
 class DatetimeProperties(Properties):
     """
@@ -181,11 +185,11 @@ class DatetimeProperties(Properties):
         return self._get_values().inferred_freq
 
 
-@delegate_names(delegate=TimedeltaIndex,
-                accessors=TimedeltaIndex._datetimelike_ops,
+@delegate_names(delegate=TimedeltaArray,
+                accessors=TimedeltaArray._datetimelike_ops,
                 typ="property")
-@delegate_names(delegate=TimedeltaIndex,
-                accessors=TimedeltaIndex._datetimelike_methods,
+@delegate_names(delegate=TimedeltaArray,
+                accessors=TimedeltaArray._datetimelike_methods,
                 typ="method")
 class TimedeltaProperties(Properties):
     """

@@ -184,6 +184,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     _attributes = ["freq", "tz"]
     _tz = None
     _freq = None
+    _scalar_type = Timestamp
 
     @classmethod
     def _simple_new(cls, values, freq=None, tz=None, **kwargs):
@@ -205,9 +206,16 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         result._freq = freq
         tz = timezones.maybe_get_tz(tz)
         result._tz = timezones.tz_standardize(tz)
+        result._dtype = DatetimeTZDtype('ns', tz)
         return result
 
     def __new__(cls, values, freq=None, tz=None, dtype=None):
+        if isinstance(values, (ABCSeries, ABCIndexClass)):
+            values = values._values
+
+        if tz is None and hasattr(values, 'tz'):
+            # e.g. DatetimeIndex
+            tz = values.tz
 
         if freq is None and hasattr(values, "freq"):
             # i.e. DatetimeArray, DatetimeIndex
@@ -331,9 +339,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
 
     @cache_readonly
     def dtype(self):
-        if self.tz is None:
-            return _NS_DTYPE
-        return DatetimeTZDtype('ns', self.tz)
+        return self._dtype
 
     @property
     def tz(self):
@@ -396,8 +402,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         elif is_int64_dtype(dtype):
             return self.asi8
 
-        # TODO: warn that conversion may be lossy?
-        return self._data.view(np.ndarray)  # follow Index.__array__
+        return self._data
 
     def __iter__(self):
         """
@@ -425,6 +430,12 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     # ----------------------------------------------------------------
     # ExtensionArray Interface
 
+    @classmethod
+    def _from_sequence(cls, scalars, dtype=None, copy=False):
+        from pandas import to_datetime
+        data = to_datetime(scalars)
+        return cls(data, dtype=dtype)
+
     @property
     def _ndarray_values(self):
         return self._data
@@ -440,6 +451,17 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
             raise ValueError("'fill_value' should be a Timestamp. "
                              "Got '{got}'.".format(got=fill_value))
         return fill_value
+
+    # -----------------------------------------------------------------
+    # Formatting Methods
+    def _format_native_types(self, na_rep='NaT', date_format=None, **kwargs):
+        from pandas.io.formats.format import _get_format_datetime64_from_values
+        format = _get_format_datetime64_from_values(self, date_format)
+
+        return tslib.format_array_from_datetime(self.asi8,
+                                                tz=self.tz,
+                                                format=format,
+                                                na_rep=na_rep)
 
     # -----------------------------------------------------------------
     # Comparison Methods

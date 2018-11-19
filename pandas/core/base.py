@@ -776,7 +776,7 @@ class IndexOpsMixin(object):
         - categorical -> codes
         """
         if is_extension_array_dtype(self):
-            return self.values._ndarray_values
+            return self._values._ndarray_values
         return self.values
 
     @property

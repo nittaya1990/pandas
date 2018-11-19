@@ -1,13 +1,15 @@
 """ define extension dtypes """
-
+import inspect
 import re
 
 import numpy as np
+import pytz
 
 from pandas._libs.interval import Interval
-from pandas._libs.tslibs import NaT, Period, Timestamp
+from pandas._libs.tslibs import NaT, Period, Timestamp, timezones
 
-from pandas.core.dtypes.generic import ABCCategoricalIndex, ABCIndexClass
+from pandas.core.dtypes.generic import (
+    ABCCategoricalIndex, ABCIndexClass, ABCSeries)
 
 from pandas import compat
 
@@ -474,7 +476,8 @@ class CategoricalDtype(PandasExtensionDtype, ExtensionDtype):
         return is_bool_dtype(self.categories)
 
 
-class DatetimeTZDtype(PandasExtensionDtype):
+@register_extension_dtype
+class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
 
     """
     A np.dtype duck-typed class, suitable for holding a custom datetime with tz
@@ -489,10 +492,15 @@ class DatetimeTZDtype(PandasExtensionDtype):
     num = 101
     base = np.dtype('M8[ns]')
     _metadata = ('unit', 'tz')
-    _match = re.compile(r"(datetime64|M8)\[(?P<unit>.+), (?P<tz>.+)\]")
+    _match = re.compile(
+        r"(datetime64|M8)\[(?P<unit>\w+),?\s?(?P<tz>.+)?\]"
+    )
     _cache = {}
+    # TODO: restore caching?
+    # who cares though? np.dtype('datetime64[ns]') doesn't return a
+    # singleton
 
-    def __new__(cls, unit=None, tz=None):
+    def __init__(self, unit="ns", tz=None):
         """ Create a new unit if needed, otherwise return from the cache
 
         Parameters
@@ -500,55 +508,29 @@ class DatetimeTZDtype(PandasExtensionDtype):
         unit : string unit that this represents, currently must be 'ns'
         tz : string tz that this represents
         """
-
         if isinstance(unit, DatetimeTZDtype):
             unit, tz = unit.unit, unit.tz
 
-        elif unit is None:
-            # we are called as an empty constructor
-            # generally for pickle compat
-            return object.__new__(cls)
+        if unit != 'ns':
+            raise ValueError("DatetimeTZDtype only supports ns units")
 
+        if tz:
+            tz = timezones.maybe_get_tz(tz)
+        elif tz is not None:
+            raise pytz.UnknownTimeZoneError(tz)
         elif tz is None:
+            raise TypeError("A 'tz' is required.")
 
-            # we were passed a string that we can construct
-            try:
-                m = cls._match.search(unit)
-                if m is not None:
-                    unit = m.groupdict()['unit']
-                    tz = m.groupdict()['tz']
-            except TypeError:
-                raise ValueError("could not construct DatetimeTZDtype")
+        self._unit = unit
+        self._tz = tz
 
-        elif isinstance(unit, compat.string_types):
+    @property
+    def unit(self):
+        return self._unit
 
-            if unit != 'ns':
-                raise ValueError("DatetimeTZDtype only supports ns units")
-
-            unit = unit
-            tz = tz
-
-        if tz is None:
-            raise ValueError("DatetimeTZDtype constructor must have a tz "
-                             "supplied")
-
-        # hash with the actual tz if we can
-        # some cannot be hashed, so stringfy
-        try:
-            key = (unit, tz)
-            hash(key)
-        except TypeError:
-            key = (unit, str(tz))
-
-        # set/retrieve from cache
-        try:
-            return cls._cache[key]
-        except KeyError:
-            u = object.__new__(cls)
-            u.unit = unit
-            u.tz = tz
-            cls._cache[key] = u
-            return u
+    @property
+    def tz(self):
+        return self._tz
 
     @classmethod
     def construct_array_type(cls):
@@ -558,22 +540,48 @@ class DatetimeTZDtype(PandasExtensionDtype):
         -------
         type
         """
-        from pandas import DatetimeIndex
-        return DatetimeIndex
+        from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
+        return DatetimeArray
 
     @classmethod
     def construct_from_string(cls, string):
         """ attempt to construct this type from a string, raise a TypeError if
         it's not possible
         """
+        msg = "could not construct DatetimeTZDtype"""
         try:
-            return cls(unit=string)
+            match = cls._match.match(string)
+            if match:
+                d = match.groupdict()
+                return cls(unit=d['unit'], tz=d['tz'])
+            else:
+                raise TypeError(msg)
         except ValueError:
-            raise TypeError("could not construct DatetimeTZDtype")
+            raise TypeError(msg)
+
+    @classmethod
+    def _from_arr_or_type(cls, arr_or_dtype):
+        if isinstance(arr_or_dtype, compat.text_type):
+            return cls.construct_from_string(arr_or_dtype)
+        if isinstance(arr_or_dtype, (ABCIndexClass, ABCSeries)):
+            arr_or_dtype = arr_or_dtype._values.dtype
+        elif (inspect.isclass(arr_or_dtype) and
+              issubclass(arr_or_dtype, np.datetime64)):
+            return DatetimeTZDtype()
+        elif hasattr(arr_or_dtype, 'dtype'):
+            arr_or_dtype = arr_or_dtype.dtype
+            # something like dtype("M8[ns]")
+            # convert to string, so we can check the precision
+            return cls.construct_from_string(str(arr_or_dtype))
+        return cls(arr_or_dtype)
 
     def __unicode__(self):
         # format the tz
-        return "datetime64[{unit}, {tz}]".format(unit=self.unit, tz=self.tz)
+        if self.tz:
+            return "datetime64[{unit}, {tz}]".format(unit=self.unit,
+                                                     tz=self.tz)
+        else:
+            return "datetime64[{unit}]".format(unit=self.unit)
 
     @property
     def name(self):
@@ -581,6 +589,7 @@ class DatetimeTZDtype(PandasExtensionDtype):
 
     def __hash__(self):
         # make myself hashable
+        # TODO: update this.
         return hash(str(self))
 
     def __eq__(self, other):
@@ -590,6 +599,13 @@ class DatetimeTZDtype(PandasExtensionDtype):
         return (isinstance(other, DatetimeTZDtype) and
                 self.unit == other.unit and
                 str(self.tz) == str(other.tz))
+
+    def __getstate__(self):
+        return self.__dict__
+
+    @classmethod
+    def is_dtype(cls, dtype):
+        return super().is_dtype(dtype)
 
 
 class PeriodDtype(ExtensionDtype, PandasExtensionDtype):

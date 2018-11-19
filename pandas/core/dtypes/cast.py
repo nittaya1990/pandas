@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from pandas._libs import lib, tslib, tslibs
-from pandas._libs.tslibs import OutOfBoundsDatetime, Period, iNaT
+from pandas._libs.tslibs import NaT, OutOfBoundsDatetime, Period, iNaT
 from pandas.compat import PY3, string_types, text_type
 
 from .common import (
@@ -251,9 +251,14 @@ def maybe_upcast_putmask(result, mask, other):
 
 def maybe_promote(dtype, fill_value=np.nan):
     # if we passed an array here, determine the fill value by dtype
+
+    # ughhhh this is going to cause so many issues.
+    # right now, we pass it BlockManager._slice_take_blocks_ax0.
+    # We want to pass through NaT to DatetimeArray.take.
+    # There's room for cleanup
     if isinstance(fill_value, np.ndarray):
         if issubclass(fill_value.dtype.type, (np.datetime64, np.timedelta64)):
-            fill_value = iNaT
+            fill_value = NaT
         else:
 
             # we need to change to object type as our
@@ -268,7 +273,7 @@ def maybe_promote(dtype, fill_value=np.nan):
         # (this is because datetime64 will not implicitly upconvert
         #  to object correctly as of numpy 1.6.1)
         if isna(fill_value):
-            fill_value = iNaT
+            fill_value = NaT
         else:
             if issubclass(dtype.type, np.datetime64):
                 try:
@@ -276,18 +281,18 @@ def maybe_promote(dtype, fill_value=np.nan):
                 except Exception:
                     # the proper thing to do here would probably be to upcast
                     # to object (but numpy 1.6.1 doesn't do this properly)
-                    fill_value = iNaT
+                    fill_value = NaT
             elif issubclass(dtype.type, np.timedelta64):
                 try:
                     fill_value = tslibs.Timedelta(fill_value).value
                 except Exception:
                     # as for datetimes, cannot upcast to object
-                    fill_value = iNaT
+                    fill_value = NaT
             else:
-                fill_value = iNaT
+                fill_value = NaT
     elif is_datetimetz(dtype):
         if isna(fill_value):
-            fill_value = iNaT
+            fill_value = NaT
     elif is_extension_array_dtype(dtype) and isna(fill_value):
         fill_value = dtype.na_value
     elif is_float(fill_value):
@@ -318,7 +323,7 @@ def maybe_promote(dtype, fill_value=np.nan):
             dtype = np.float64
             fill_value = np.nan
         elif is_datetime_or_timedelta_dtype(dtype):
-            fill_value = iNaT
+            fill_value = NaT
         else:
             dtype = np.object_
             fill_value = np.nan

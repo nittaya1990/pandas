@@ -21,9 +21,10 @@ from pandas.core.dtypes.common import (
     is_integer, is_integer_dtype, is_list_like, is_period_dtype, is_scalar,
     is_string_like, pandas_dtype)
 import pandas.core.dtypes.concat as _concat
-from pandas.core.dtypes.generic import ABCSeries
+from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
 from pandas.core.dtypes.missing import isna
 
+from pandas.core.accessor import delegate_names
 from pandas.core.arrays import datetimelike as dtl
 from pandas.core.arrays.datetimes import (
     DatetimeArrayMixin as DatetimeArray, _to_m8)
@@ -31,8 +32,8 @@ from pandas.core.base import _shared_docs
 import pandas.core.common as com
 from pandas.core.indexes.base import Index, _index_shared_docs
 from pandas.core.indexes.datetimelike import (
-    DatelikeOps, DatetimeIndexOpsMixin, TimelikeOps, wrap_array_method,
-    wrap_field_accessor)
+    DatelikeIndexMixin, DatetimeIndexOpsMixin, DatetimelikeDelegateMixin,
+    wrap_array_method, wrap_field_accessor)
 from pandas.core.indexes.numeric import Int64Index
 from pandas.core.ops import get_op_result_name
 import pandas.core.tools.datetimes as tools
@@ -56,8 +57,20 @@ def _new_DatetimeIndex(cls, d):
     return result
 
 
-class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
-                    DatetimeIndexOpsMixin, Int64Index):
+class DatetimeDelegateMixin(DatetimelikeDelegateMixin):
+    _delegate_class = DatetimeArray
+
+
+@delegate_names(DatetimeArray,
+                DatetimeArray._datetimelike_ops,
+                typ="property")
+@delegate_names(DatetimeArray,
+                DatetimeArray._datetimelike_methods,
+                typ="method", overwrite=True)
+class DatetimeIndex(DatelikeIndexMixin,
+                    DatetimeIndexOpsMixin,
+                    Int64Index,
+                    DatetimeDelegateMixin):
     """
     Immutable ndarray of datetime64 data, represented internally as int64, and
     which can be boxed to Timestamp objects that are subclasses of datetime and
@@ -172,6 +185,21 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
     """
     _typ = 'datetimeindex'
     _join_precedence = 10
+    # TODO: dispatch
+
+    @classmethod
+    def _generate_range(cls, start, end, periods, freq, tz=None,
+                        normalize=False, ambiguous="raise",
+                        closed=None):
+        return cls._simple_new(
+            DatetimeArray._generate_range(
+                start, end, periods, freq, tz=tz,
+                normalize=normalize, ambiguous=ambiguous,
+                closed=closed,
+            )
+        )
+    _box_func = DatetimeArray._box_func
+    _box_values = DatetimeArray._box_values
 
     def _join_i8_wrapper(joinf, **kwargs):
         return DatetimeIndexOpsMixin._join_i8_wrapper(joinf, dtype='M8[ns]',
@@ -193,26 +221,12 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
     # dummy attribute so that datetime.__eq__(DatetimeArray) defers
     # by returning NotImplemented
     timetuple = None
-
-    # define my properties & methods for delegation
-    _bool_ops = ['is_month_start', 'is_month_end',
-                 'is_quarter_start', 'is_quarter_end', 'is_year_start',
-                 'is_year_end', 'is_leap_year']
-    _object_ops = ['weekday_name', 'freq', 'tz']
-    _field_ops = ['year', 'month', 'day', 'hour', 'minute', 'second',
-                  'weekofyear', 'week', 'weekday', 'dayofweek',
-                  'dayofyear', 'quarter', 'days_in_month',
-                  'daysinmonth', 'microsecond',
-                  'nanosecond']
-    _other_ops = ['date', 'time', 'timetz']
-    _datetimelike_ops = _field_ops + _object_ops + _bool_ops + _other_ops
-    _datetimelike_methods = ['to_period', 'tz_localize',
-                             'tz_convert',
-                             'normalize', 'strftime', 'round', 'floor',
-                             'ceil', 'month_name', 'day_name']
-
     _is_numeric_dtype = False
     _infer_as_myclass = True
+
+    # some things like freq inference make use of these attributes.
+    _bool_ops = DatetimeArray._bool_ops
+    _object_ops = DatetimeArray._object_ops
 
     # --------------------------------------------------------------------
     # Constructors
@@ -251,6 +265,8 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
 
         # if dtype has an embedded tz, capture it
         tz = dtl.validate_tz_from_dtype(dtype, tz)
+        if isinstance(data, (ABCSeries, ABCIndexClass)):
+            data = data._values
 
         if not isinstance(data, (np.ndarray, Index, ABCSeries, DatetimeArray)):
             # other iterable of some kind
@@ -266,7 +282,11 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
             data = tools.to_datetime(data, dayfirst=dayfirst,
                                      yearfirst=yearfirst)
 
-        if isinstance(data, DatetimeArray):
+        if isinstance(data, cls):
+            data = data._data
+
+        # TODO: tools.to_datetime -> DatetimeArrya?
+        if isinstance(data, (cls, DatetimeArray)):
             if tz is None:
                 tz = data.tz
             elif data.tz is None:
@@ -326,7 +346,8 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
         if we are passed a non-dtype compat, then coerce using the constructor
         """
         # DatetimeArray._simple_new will accept either i8 or M8[ns] dtypes
-        assert isinstance(values, np.ndarray), type(values)
+        values = DatetimeArray(values, dtype=dtype, freq=freq, tz=tz)
+        # assert isinstance(values, np.ndarray), type(values)
 
         result = super(DatetimeIndex, cls)._simple_new(values, freq, tz,
                                                        **kwargs)
@@ -334,21 +355,19 @@ class DatetimeIndex(DatetimeArray, DatelikeOps, TimelikeOps,
         result._reset_identity()
         return result
 
+    @property
+    def values(self):
+        return self._data._data
     # --------------------------------------------------------------------
 
     @property
     def _values(self):
-        # tz-naive -> ndarray
-        # tz-aware -> DatetimeIndex
-        if self.tz is not None:
-            return self
-        else:
-            return self.values
+        return self._data
 
     @property
     def tz(self):
         # GH 18595
-        return self._tz
+        return self.dtype.tz
 
     @tz.setter
     def tz(self, value):

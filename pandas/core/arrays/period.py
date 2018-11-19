@@ -22,7 +22,6 @@ from pandas.core.dtypes.common import (
     pandas_dtype,
     is_datetime64_dtype,
     is_categorical_dtype,
-    is_list_like,
     is_array_like,
     is_object_dtype,
     is_string_dtype,
@@ -153,6 +152,7 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
     __array_priority__ = 1000
     _attributes = ["freq"]
     _typ = "periodarray"  # ABCPeriodArray
+    _scalar_type = Period
 
     # Names others delegate to us
     _other_ops = []
@@ -358,47 +358,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
             self.dtype
         )
 
-    def __setitem__(
-            self,
-            key,   # type: Union[int, Sequence[int], Sequence[bool]]
-            value  # type: Union[NaTType, Period, Sequence[Period]]
-    ):
-        # type: (...) -> None
-        # n.b. the type on `value` is a bit too restrictive.
-        # we also accept a sequence of stuff coercible to a PeriodArray
-        # by period_array, which includes things like ndarray[object],
-        # ndarray[datetime64ns]. I think ndarray[int] / ndarray[str] won't
-        # work, since the freq can't be inferred.
-        if is_list_like(value):
-            if len(key) != len(value) and not com.is_bool_indexer(key):
-                msg = ("shape mismatch: value array of length '{}' does not "
-                       "match indexing result of length '{}'.")
-                raise ValueError(msg.format(len(key), len(value)))
-            if len(key) == 0:
-                return
-
-            value = period_array(value)
-
-            if self.freqstr != value.freqstr:
-                msg = DIFFERENT_FREQ_INDEX.format(self.freqstr, value.freqstr)
-                raise IncompatibleFrequency(msg)
-
-            value = value.asi8
-        elif isinstance(value, Period):
-
-            if self.freqstr != value.freqstr:
-                msg = DIFFERENT_FREQ_INDEX.format(self.freqstr, value.freqstr)
-                raise IncompatibleFrequency(msg)
-
-            value = value.ordinal
-        elif isna(value):
-            value = iNaT
-        else:
-            msg = ("'value' should be a 'Period', 'NaT', or array of those. "
-                   "Got '{}' instead.".format(type(value).__name__))
-            raise TypeError(msg)
-        self._data[key] = value
-
     @Appender(dtl.DatetimeLikeArrayMixin._validate_fill_value.__doc__)
     def _validate_fill_value(self, fill_value):
         if isna(fill_value):
@@ -465,30 +424,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
         return Series(result.values, index=index, name=result.name)
 
     # --------------------------------------------------------------------
-
-    def shift(self, periods=1):
-        """
-        Shift values by desired number.
-
-        Newly introduced missing values are filled with
-        ``self.dtype.na_value``.
-
-        .. versionadded:: 0.24.0
-
-        Parameters
-        ----------
-        periods : int, default 1
-            The number of periods to shift. Negative values are allowed
-            for shifting backwards.
-
-        Returns
-        -------
-        shifted : PeriodArray
-        """
-        # TODO(DatetimeArray): remove
-        # The semantics for Index.shift differ from EA.shift
-        # then just call super.
-        return ExtensionArray.shift(self, periods)
 
     def _time_shift(self, n, freq=None):
         """
@@ -663,6 +598,13 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
         # place.
         return self._data.flags
 
+    # ------------------------------------------------------------------
+    # DatetimeLikeMixin methods
+
+    def _check_compatible_with(self, other):
+        if self.freqstr != other.freqstr:
+            msg = DIFFERENT_FREQ_INDEX.format(self.freqstr, other.freqstr)
+            raise IncompatibleFrequency(msg)
     # ------------------------------------------------------------------
     # Arithmetic Methods
     _create_comparison_method = classmethod(_period_array_cmp)
@@ -939,19 +881,24 @@ def dt64arr_to_periodarr(data, freq, tz=None):
         used.
 
     """
-    if data.dtype != np.dtype('M8[ns]'):
+    from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
+
+    # if data.dtype != np.dtype('M8[ns]'):
+    if data.dtype != 'datetime64[ns]':
         raise ValueError('Wrong dtype: %s' % data.dtype)
 
-    if freq is None:
-        if isinstance(data, ABCIndexClass):
-            data, freq = data._values, data.freq
-        elif isinstance(data, ABCSeries):
-            data, freq = data._values, data.dt.freq
+    if isinstance(data, (ABCSeries, ABCIndexClass)):
+        # first, get undeclared things
+        if freq is None:
+            freq = data._values.freq
+        if tz is None:
+            tz = data._values.dtype.tz
+
+        data = data._values
 
     freq = Period._maybe_convert_freq(freq)
-
-    if isinstance(data, (ABCIndexClass, ABCSeries)):
-        data = data._values
+    if isinstance(data, DatetimeArray):
+        data = data.asi8
 
     base, mult = frequencies.get_freq_code(freq)
     return libperiod.dt64arr_to_periodarr(data.view('i8'), base, tz), freq
