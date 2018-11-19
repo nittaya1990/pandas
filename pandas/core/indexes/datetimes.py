@@ -70,7 +70,7 @@ class DatetimeDelegateMixin(DatetimelikeDelegateMixin):
                 typ="property")
 @delegate_names(DatetimeArray,
                 DatetimeArray._datetimelike_methods,
-                typ="method", overwrite=True)
+                typ="method", overwrite=False)
 class DatetimeIndex(DatelikeIndexMixin,
                     DatetimeIndexOpsMixin,
                     Int64Index,
@@ -220,7 +220,9 @@ class DatetimeIndex(DatelikeIndexMixin,
     _tz = None
     _freq = None
     _comparables = ['name', 'freqstr', 'tz']
-    _attributes = ['name', 'freq', 'tz']
+    # TODO: decide whether freq is an attribute.
+    # Keeping it in attributes breaks things like Index.__getitem__
+    _attributes = ['name', 'tz']
 
     # dummy attribute so that datetime.__eq__(DatetimeArray) defers
     # by returning NotImplemented
@@ -231,6 +233,8 @@ class DatetimeIndex(DatelikeIndexMixin,
     # some things like freq inference make use of these attributes.
     _bool_ops = DatetimeArray._bool_ops
     _object_ops = DatetimeArray._object_ops
+    _field_ops = DatetimeArray._field_ops
+
     _local_timestamps = DatetimeArray._local_timestamps
     _validate_frequency = DatetimeArray._validate_frequency
     to_pydatetime = DatetimeArray.to_pydatetime

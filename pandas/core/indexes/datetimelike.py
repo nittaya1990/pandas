@@ -211,7 +211,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
         else:
             sorted_values = np.sort(self._ndarray_values)
             attribs = self._get_attributes_dict()
-            freq = attribs['freq']
+            freq = self.freq
 
             if freq is not None and not is_period_dtype(self):
                 if freq.n > 0 and not ascending:
@@ -554,6 +554,11 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     def astype(self, dtype, copy=True):
         new_values = self._values.astype(dtype, copy=copy)
         return Index(new_values, dtype=dtype)
+
+    def view(self, dtype=None, type=None):
+        if dtype is None or dtype is __builtins__['type'](self):
+            return self
+        return self._ndarray_values.view(dtype=dtype)
 
     @deprecate_kwarg(old_arg_name='n', new_arg_name='periods')
     def shift(self, periods, freq=None):

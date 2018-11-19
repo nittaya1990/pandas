@@ -549,6 +549,7 @@ class TestDatetimeIndex(object):
         with pytest.raises(NotImplementedError):
             idx.get_loc(time(12, 30), method='pad')
 
+    @pytest.mark.xfail(reason="timedelta", strict=True)
     def test_get_indexer(self):
         idx = pd.date_range('2000-01-01', periods=3)
         exp = np.array([0, 1, 2], dtype=np.intp)

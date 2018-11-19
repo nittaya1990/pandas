@@ -888,12 +888,6 @@ class PeriodIndex(DatetimeIndexOpsMixin,
         # TODO(DatetimeArray): Just use Index.repeat
         return Index.repeat(self, repeats, *args, **kwargs)
 
-    def view(self, dtype=None, type=None):
-        # TODO(DatetimeArray): remove
-        if dtype is None or dtype is __builtins__['type'](self):
-            return self
-        return self._ndarray_values.view(dtype=dtype)
-
     @property
     def flags(self):
         """ return the ndarray.flags for the underlying data """

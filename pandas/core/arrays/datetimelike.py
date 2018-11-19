@@ -42,7 +42,9 @@ from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pandas.core.dtypes.missing import isna
 
 import pandas.core.common as com
-from pandas.core.algorithms import checked_add_with_arr, take, unique1d
+from pandas.core.algorithms import (
+    checked_add_with_arr, take, unique1d, value_counts
+)
 
 from .base import ExtensionOpsMixin, ExtensionArray
 
@@ -243,7 +245,6 @@ class TimelikeOps(object):
     def _round(self, freq, mode, ambiguous, nonexistent):
         from pandas.core.indexes.datetimelike import _ensure_datetimelike_to_i8
         # round the local times
-        # TODO
         values = _ensure_datetimelike_to_i8(self)
         result = round_nsint64(values, mode, freq)
         result = self._maybe_mask_results(result, fill_value=NaT)
@@ -575,6 +576,21 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     @classmethod
     def _from_factorized(cls, values, original):
         return cls(values, dtype=original.dtype)
+
+    def value_counts(self, dropna=False):
+        from pandas import Series, Index
+
+        if dropna:
+            values = self[~self.isna()]._data
+        else:
+            values = self._data
+
+        cls = type(self)
+
+        result = value_counts(values, sort=False, dropna=dropna)
+        index = Index(cls(result.index, dtype=self.dtype),
+                      name=result.index.name)
+        return Series(result.values, index=index, name=result.name)
 
     # ------------------------------------------------------------------
     # Null Handling
