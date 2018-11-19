@@ -4208,8 +4208,7 @@ def _sanitize_array(data, index, dtype=None, copy=False,
                 subarr = maybe_cast_to_integer_array(arr, dtype)
 
             # XXX: restore this, or just remove?
-            subarr = arr
-            # subarr = maybe_cast_to_datetime(arr, dtype)
+            subarr = maybe_cast_to_datetime(arr, dtype)
             # Take care in creating object arrays (but iterators are not
             # supported):
             if is_object_dtype(dtype) and (is_list_like(subarr) and
@@ -4284,7 +4283,7 @@ def _sanitize_array(data, index, dtype=None, copy=False,
             subarr = maybe_convert_platform(data)
 
         # XXX: restore / remove
-        # subarr = maybe_cast_to_datetime(subarr, dtype)
+        subarr = maybe_cast_to_datetime(subarr, dtype)
 
     elif isinstance(data, range):
         # GH 16804

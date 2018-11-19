@@ -67,6 +67,7 @@ import pandas.core.missing as missing
 from pandas.core.base import PandasObject
 
 from pandas.core.arrays import Categorical
+from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
 
 from pandas.core.indexes.datetimes import DatetimeIndex
 from pandas.core.indexes.timedeltas import TimedeltaIndex
@@ -2129,7 +2130,7 @@ class DatetimeLikeBlockMixin(object):
 
     @property
     def _holder(self):
-        return DatetimeIndex
+        return DatetimeArray
 
     @property
     def _na_value(self):
@@ -2138,15 +2139,6 @@ class DatetimeLikeBlockMixin(object):
     @property
     def fill_value(self):
         return tslibs.iNaT
-
-    def get_values(self, dtype=None):
-        """
-        return object dtype as boxed values, such as Timestamps/Timedelta
-        """
-        if is_object_dtype(dtype):
-            return lib.map_infer(self.values.ravel(),
-                                 self._box_func).reshape(self.values.shape)
-        return self.values
 
     def to_dense(self):
         # TODO(DatetimeBlock): remove
@@ -2866,7 +2858,7 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         if dtype is not None:
             if isinstance(dtype, compat.string_types):
                 dtype = DatetimeTZDtype.construct_from_string(dtype)
-            values = values._shallow_copy(tz=dtype.tz)
+            values = type(values)(values, tz=dtype.tz)
 
         if values.tz is None:
             raise ValueError("cannot create a DatetimeTZBlock without a tz")
@@ -2877,7 +2869,7 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
     def is_view(self):
         """ return a boolean if I am possibly a view """
         # check the ndarray values of the DatetimeIndex values
-        return self.values.values.base is not None
+        return self.values._data.base is not None
 
     def copy(self, deep=True):
         """ copy constructor """
@@ -2890,14 +2882,15 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         """ we internally represent the data as a DatetimeIndex, but for
         external compat with ndarray, export as a ndarray of Timestamps
         """
-        return self.values.astype('datetime64[ns]').values
+        return np.asarray(self.values.astype('datetime64[ns]'))
 
     def get_values(self, dtype=None):
         # return object dtype as Timestamps with the zones
+        values = self.values
         if is_object_dtype(dtype):
-            return lib.map_infer(
-                self.values.ravel(), self._box_func).reshape(self.values.shape)
-        return self.values
+            return (values._box_values(values._data)
+                    .reshape(self.values.shape))
+        return self.values.values
 
     def _slice(self, slicer):
         """ return a slice of my values """
@@ -2960,7 +2953,8 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
             # allow passing of > 1dim if its trivial
             if result.ndim > 1:
                 result = result.reshape(np.prod(result.shape))
-            result = self.values._shallow_copy(result)
+            # TODO: verify we want tz here.
+            result = self.values._simple_new(result, tz=self.values.tz)
 
         return result
 
@@ -3052,6 +3046,11 @@ def get_block_type(values, dtype=None):
 
     if is_categorical(values):
         cls = CategoricalBlock
+    elif issubclass(vtype, np.datetime64):
+        assert not is_datetimetz(values)
+        cls = DatetimeBlock
+    elif is_datetimetz(values):
+        cls = DatetimeTZBlock
     elif is_extension_array_dtype(values):
         cls = ExtensionBlock
     elif issubclass(vtype, np.floating):
@@ -3061,11 +3060,6 @@ def get_block_type(values, dtype=None):
         cls = TimeDeltaBlock
     elif issubclass(vtype, np.complexfloating):
         cls = ComplexBlock
-    elif issubclass(vtype, np.datetime64):
-        assert not is_datetimetz(values)
-        cls = DatetimeBlock
-    elif is_datetimetz(values):
-        cls = DatetimeTZBlock
     elif issubclass(vtype, np.integer):
         cls = IntBlock
     elif dtype == np.bool_:
