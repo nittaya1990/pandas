@@ -95,13 +95,19 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     @staticmethod
     def _join_i8_wrapper(joinf, dtype, with_indexers=True):
         """ create the join wrapper methods """
+        # TODO: should this be the base class to included period/TD?
+        from pandas.core.arrays import DatetimeArrayMixin
 
         @staticmethod
         def wrapper(left, right):
             if isinstance(left, (np.ndarray, ABCIndex, ABCSeries)):
                 left = left.view('i8')
+            elif isinstance(left, DatetimeArrayMixin):
+                left = left.asi8
             if isinstance(right, (np.ndarray, ABCIndex, ABCSeries)):
                 right = right.view('i8')
+            elif isinstance(right, DatetimeArrayMixin):
+                right = right.asi8
             results = joinf(left, right)
             if with_indexers:
                 join_index, left_indexer, right_indexer = results
