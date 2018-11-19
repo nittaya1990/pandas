@@ -1501,6 +1501,20 @@ def needs_i8_conversion(arr_or_dtype):
             is_period_dtype(arr_or_dtype))
 
 
+def convert_i8(arr):
+    from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin
+
+    if isinstance(arr, (ABCSeries, ABCIndexClass)):
+        arr = arr._values
+
+    if isinstance(arr, np.ndarray):
+        return arr.view('i8')
+    elif isinstance(arr, DatetimeLikeArrayMixin):
+        return arr.asi8
+    else:
+        raise TypeError("Unexpected type {}".format(type))
+
+
 def is_numeric_dtype(arr_or_dtype):
     """
     Check whether the provided array or dtype is of a numeric dtype.

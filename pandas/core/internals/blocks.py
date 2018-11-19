@@ -2148,6 +2148,10 @@ class DatetimeLikeBlockMixin(object):
                                  self._box_func).reshape(self.values.shape)
         return self.values
 
+    def to_dense(self):
+        # TODO(DatetimeBlock): remove
+        return np.asarray(self.values)
+
 
 class TimeDeltaBlock(DatetimeLikeBlockMixin, IntBlock):
     __slots__ = ()

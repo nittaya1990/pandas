@@ -56,7 +56,7 @@ def _make_comparison_op(cls, op):
         if isinstance(other, ABCDataFrame):
             return NotImplemented
 
-        if isinstance(other, (np.ndarray, ABCIndexClass, ABCSeries)):
+        if isinstance(other, (np.ndarray, ABCIndexClass, ABCSeries, cls)):
             if other.ndim > 0 and len(self) != len(other):
                 raise ValueError('Lengths must match to compare')
 
@@ -516,6 +516,9 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
         ndarray[str]
         """
         raise AbstractMethodError(self)
+
+    def _formatting_values(self):
+        return np.array(self, dtype=object)
 
     # ------------------------------------------------------------------
     # ExtensionArray Interface

@@ -817,6 +817,12 @@ class DatetimeIndex(DatelikeIndexMixin,
               not other.freq.isAnchored() or
               (not self.is_monotonic or not other.is_monotonic)):
             result = Index.intersection(self, other)
+            # XXX: This is a hack to work around shallow_copy.
+            # We set result.freq = None, since otherwise we end up pulling
+            # the freq off result._values.freq, which is wrong.
+            # To fix it properly, we should ensure that result._values.freq
+            # is none as part of Index.intersection.
+            result.freq = None
             result = self._shallow_copy(result._values, name=result.name,
                                         tz=result.tz, freq=None)
             if result.freq is None:

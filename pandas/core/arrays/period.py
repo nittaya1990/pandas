@@ -24,7 +24,7 @@ from pandas.core.dtypes.common import (
     is_array_like,
     ensure_object,
     _TD_DTYPE,
-    is_datetime64tz_dtype)
+    is_datetime64tz_dtype, is_datetime64_any_dtype)
 from pandas.core.dtypes.dtypes import PeriodDtype
 from pandas.core.dtypes.generic import (
     ABCSeries, ABCIndexClass, ABCPeriodIndex
@@ -834,7 +834,7 @@ def dt64arr_to_periodarr(data, freq, tz=None):
     from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
 
     # if data.dtype != np.dtype('M8[ns]'):
-    if data.dtype != 'datetime64[ns]':
+    if not is_datetime64_any_dtype(data.dtype):
         raise ValueError('Wrong dtype: %s' % data.dtype)
 
     if isinstance(data, (ABCSeries, ABCIndexClass)):

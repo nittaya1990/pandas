@@ -52,6 +52,25 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     # A few methods that are shared
     _maybe_mask_results = DatetimeLikeArrayMixin._maybe_mask_results
 
+    # Note: moved from DatetimeLikeArrayMixin
+    @property
+    def offset(self):
+        """get/set the frequency of the instance"""
+        msg = ('{cls}.offset has been deprecated and will be removed '
+               'in a future version; use {cls}.freq instead.'
+               .format(cls=type(self).__name__))
+        warnings.warn(msg, FutureWarning, stacklevel=2)
+        return self.freq
+
+    @offset.setter
+    def offset(self, value):
+        """get/set the frequency of the instance"""
+        msg = ('{cls}.offset has been deprecated and will be removed '
+               'in a future version; use {cls}.freq instead.'
+               .format(cls=type(self).__name__))
+        warnings.warn(msg, FutureWarning, stacklevel=2)
+        self.freq = value
+
     @classmethod
     def _create_comparison_method(cls, op):
         """
