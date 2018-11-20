@@ -89,18 +89,7 @@ class TestDatetimeDtype(BaseDatetimeTests, base.BaseDtypeTests):
 
 
 class TestConstructors(BaseDatetimeTests, base.BaseConstructorsTests):
-
-    @skip_tz_block
-    def test_series_constructor(self, data):
-        super().test_series_constructor(data)
-
-    @skip_tz_block
-    def test_dataframe_constructor_from_dict(self, data, from_series):
-        return super().test_dataframe_constructor_from_dict(data, from_series)
-
-    @skip_tz_block
-    def test_dataframe_from_series(self, data):
-        super().test_dataframe_from_series(data)
+    pass
 
 
 class TestGetitem(BaseDatetimeTests, base.BaseGetitemTests):
@@ -211,7 +200,7 @@ class TestReshaping(BaseDatetimeTests, base.BaseReshapingTests):
         # concat(Series[datetimetz], Series[category]) uses a
         # plain np.array(values) on the DatetimeArray, which
         # drops the tz.
-        pass
+        super(TestReshaping, self).test_concat_mixed_dtypes(data)
 
 
 class TestSetitem(BaseDatetimeTests, base.BaseSetitemTests):

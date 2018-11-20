@@ -2786,7 +2786,7 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         self.values[locs] = values
 
 
-class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
+class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
     """ implement a datetime64 block with a tz attribute """
     __slots__ = ()
     is_datetimetz = True
@@ -2804,6 +2804,10 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
             values = self._maybe_coerce_values(values, dtype=dtype)
         super(DatetimeTZBlock, self).__init__(values, placement=placement,
                                               ndim=ndim)
+
+    @property
+    def _holder(self):
+        return DatetimeArray
 
     def _maybe_coerce_values(self, values, dtype=None):
         """Input validation for values passed to __init__. Ensure that
@@ -2957,9 +2961,6 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         new_values = new_values.reshape(1, len(new_values))
         new_values = new_values.astype('timedelta64[ns]')
         return [TimeDeltaBlock(new_values, placement=self.mgr_locs.indexer)]
-
-    shift = ExtensionBlock.shift
-    concat_same_type = ExtensionBlock.concat_same_type
 
 
 # -----------------------------------------------------------------
