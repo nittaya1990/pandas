@@ -433,7 +433,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
 
     def _check_compatible_with(self, other):
         # TODO: verify this.
-        if self.tz != other.tz:
+        if not timezones.tz_compare(self.tz, other.tz):
             raise ValueError("Timezones don't match")
 
     @Appender(dtl.DatetimeLikeArrayMixin._validate_fill_value.__doc__)

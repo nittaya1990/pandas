@@ -74,6 +74,9 @@ def na_value():
     return pd.NaT
 
 
+skip_tz_block = pytest.mark.xfail(reason="DatetimeTZBlock", strict=True)
+
+
 # ----------------------------------------------------------------------------
 class BaseDatetimeTests(object):
     pass
@@ -87,17 +90,15 @@ class TestDatetimeDtype(BaseDatetimeTests, base.BaseDtypeTests):
 
 class TestConstructors(BaseDatetimeTests, base.BaseConstructorsTests):
 
-    tz_block = pytest.mark.xfail(reason="DatetimeTZBlock", strict=True)
-
-    @tz_block
+    @skip_tz_block
     def test_series_constructor(self, data):
         super().test_series_constructor(data)
 
-    @tz_block
+    @skip_tz_block
     def test_dataframe_constructor_from_dict(self, data, from_series):
         return super().test_dataframe_constructor_from_dict(data, from_series)
 
-    @tz_block
+    @skip_tz_block
     def test_dataframe_from_series(self, data):
         super().test_dataframe_from_series(data)
 
@@ -200,7 +201,10 @@ class TestMissing(BaseDatetimeTests, base.BaseMissingTests):
 
 
 class TestReshaping(BaseDatetimeTests, base.BaseReshapingTests):
-    pass
+
+    @skip_tz_block
+    def test_concat(self, data, in_frame):
+        return super().test_concat(data, in_frame)
 
 
 class TestSetitem(BaseDatetimeTests, base.BaseSetitemTests):
