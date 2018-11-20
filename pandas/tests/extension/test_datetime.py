@@ -202,6 +202,13 @@ class TestReshaping(BaseDatetimeTests, base.BaseReshapingTests):
         # drops the tz.
         super(TestReshaping, self).test_concat_mixed_dtypes(data)
 
+    @pytest.mark.xfail(reason="GH-13287", strict=True)
+    def test_unstack(self, data, index, obj):
+        # This fails creating the expected.
+        # Ahh this is going to always xfail, since we don't have the
+        # fixtures...
+        return super(TestReshaping, self).test_unstack(data, index, obj)
+
 
 class TestSetitem(BaseDatetimeTests, base.BaseSetitemTests):
     pass
