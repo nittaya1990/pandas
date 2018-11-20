@@ -164,6 +164,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         _data
     """
     _typ = "datetimearray"
+    _scalar_type = Timestamp
     _bool_ops = ['is_month_start', 'is_month_end',
                  'is_quarter_start', 'is_quarter_end', 'is_year_start',
                  'is_year_end', 'is_leap_year']
@@ -182,7 +183,6 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     _attributes = ["freq", "tz"]
     _tz = None
     _freq = None
-    _scalar_type = Timestamp
 
     @classmethod
     def _simple_new(cls, values, freq=None, tz=None, **kwargs):
@@ -388,6 +388,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     # Array-Like / EA-Interface Methods
 
     def __array__(self, dtype=None):
+        # TODO: Check PeriodArray.__array__ and push to parent
         if is_object_dtype(dtype):
             return np.array(list(self), dtype=object)
         elif is_int64_dtype(dtype):
@@ -425,10 +426,14 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     def _from_sequence(cls, scalars, dtype=None, copy=False):
         from pandas import to_datetime
         data = to_datetime(scalars)
+        if copy:
+            data = data.copy()
+
         return cls(data, dtype=dtype)
 
     @property
     def _ndarray_values(self):
+        # TODO: Move to parent
         return self._data
 
     def _check_compatible_with(self, other):
@@ -967,8 +972,8 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
 
     def astype(self, dtype, copy=True):
         # We handle
-        #   - datetime -> datetime
-        #   - datetime -> period
+        #   --> datetime
+        #   --> period
         # Super handles the rest.
         dtype = pandas_dtype(dtype)
 

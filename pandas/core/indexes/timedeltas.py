@@ -23,8 +23,8 @@ from pandas.core.base import _shared_docs
 import pandas.core.common as com
 from pandas.core.indexes.base import Index, _index_shared_docs
 from pandas.core.indexes.datetimelike import (
-    DatetimeIndexOpsMixin, DatetimelikeDelegateMixin, wrap_arithmetic_op,
-    wrap_array_method, wrap_field_accessor)
+    DatelikeIndexMixin, DatetimeIndexOpsMixin, DatetimelikeDelegateMixin,
+    wrap_arithmetic_op, wrap_array_method, wrap_field_accessor)
 from pandas.core.indexes.numeric import Int64Index
 from pandas.core.ops import get_op_result_name
 from pandas.core.tools.timedeltas import _coerce_scalar_to_timedelta_type
@@ -42,9 +42,10 @@ class TimedeltaDelegateMixin(DatetimelikeDelegateMixin):
 @delegate_names(TimedeltaArray,
                 TimedeltaArray._datetimelike_methods,
                 typ="method", overwrite=True)
-class TimedeltaIndex(TimedeltaDelegateMixin,
-                     DatetimeIndexOpsMixin,
-                     Int64Index):
+class TimedeltaIndex(DatetimeIndexOpsMixin,
+                     DatelikeIndexMixin,
+                     Int64Index,
+                     TimedeltaDelegateMixin):
     """
     Immutable ndarray of timedelta64 data, represented internally as int64, and
     which can be boxed to timedelta objects
@@ -110,8 +111,6 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
 
     _typ = 'timedeltaindex'
     _join_precedence = 10
-    # TODO: dispatch
-    _generate_range = TimedeltaArray._generate_range
 
     def _join_i8_wrapper(joinf, **kwargs):
         return DatetimeIndexOpsMixin._join_i8_wrapper(
@@ -132,6 +131,12 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
 
     _freq = None
 
+    _box_func = TimedeltaArray._box_func
+    _validate_frequency = TimedeltaArray._validate_frequency
+    _bool_ops = TimedeltaArray._bool_ops
+    _object_ops = TimedeltaArray._object_ops
+    _field_ops = TimedeltaArray._field_ops
+
     def __new__(cls, data=None, unit=None, freq=None, start=None, end=None,
                 periods=None, closed=None, dtype=None, copy=False,
                 name=None, verify_integrity=True):
@@ -150,7 +155,13 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
                             'collection of some kind, {data} was passed'
                             .format(cls=cls.__name__, data=repr(data)))
 
-        if isinstance(data, TimedeltaIndex) and freq is None and name is None:
+        if isinstance(data, TimedeltaArray):
+            if copy:
+                data = data.copy()
+            return cls._simple_new(data, name=name, freq=freq)
+
+        if (isinstance(data, (TimedeltaArray, TimedeltaIndex)) and
+                freq is None and name is None):
             if copy:
                 return data.copy()
             else:
@@ -171,6 +182,7 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
                 freq_infer = False
             verify_integrity = False
 
+        data = TimedeltaArray(data, freq=freq)
         subarr = cls._simple_new(data, name=name, freq=freq)
         # check that we are matching freqs
         if verify_integrity and len(subarr) > 0:
@@ -186,17 +198,31 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
     def _simple_new(cls, values, name=None, freq=None, dtype=_TD_DTYPE):
         # `dtype` is passed by _shallow_copy in corner cases, should always
         #  be timedelta64[ns] if present
-        assert dtype == _TD_DTYPE
-
-        assert isinstance(values, np.ndarray), type(values)
-        if values.dtype == 'i8':
-            values = values.view('m8[ns]')
+        values = TimedeltaArray(values, dtype=dtype, freq=freq)
+        assert isinstance(values, TimedeltaArray), type(values)
+        assert dtype == _TD_DTYPE, dtype
         assert values.dtype == 'm8[ns]', values.dtype
 
         result = super(TimedeltaIndex, cls)._simple_new(values, freq)
         result.name = name
         result._reset_identity()
         return result
+
+    @classmethod
+    def _generate_range(cls, start, end, periods, freq, closed=None):
+        return cls._simple_new(
+            TimedeltaArray._generate_range(start, end, periods, freq,
+                                           closed=closed)
+        )
+
+    @property
+    def values(self):
+        return self._data._data
+
+    @property
+    def _values(self):
+        # TODO: Check period and move to Parent
+        return self._data
 
     @property
     def _formatter_func(self):
@@ -244,13 +270,14 @@ class TimedeltaIndex(TimedeltaDelegateMixin,
     @Appender(_index_shared_docs['astype'])
     def astype(self, dtype, copy=True):
         dtype = pandas_dtype(dtype)
+        result = self._values.astype(dtype, copy=copy)
+
         if is_timedelta64_dtype(dtype) and not is_timedelta64_ns_dtype(dtype):
-            # return an index (essentially this is division)
-            result = self.values.astype(dtype, copy=copy)
+            # Have to repeat the check for 'timedelta64' (not ns) dtype
+            # so that we can return a numeric index, since pandas will return
+            # a TimedeltaIndex when dtype='timedelta'
             if self.hasnans:
-                values = self._maybe_mask_results(result, fill_value=None,
-                                                  convert='float64')
-                return Index(values, name=self.name)
+                return Index(result, name=self.name)
             return Index(result.astype('i8'), name=self.name)
         return super(TimedeltaIndex, self).astype(dtype, copy=copy)
 

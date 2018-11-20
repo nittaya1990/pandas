@@ -572,7 +572,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def astype(self, dtype, copy=True):
         new_values = self._values.astype(dtype, copy=copy)
-        return Index(new_values, dtype=dtype)
+        return Index(new_values, dtype=dtype, name=self.name)
 
     def view(self, dtype=None, type=None):
         if dtype is None or dtype is __builtins__['type'](self):
@@ -605,8 +605,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
         --------
         DatetimeIndex.shift : Shift values of DatetimeIndex.
         """
-        i8values = self._data._time_shift(periods, freq=freq)
-        return self._simple_new(i8values, name=self.name, freq=self.freq)
+        new_values = self._data._time_shift(periods, freq=freq)
+        return self._simple_new(new_values, name=self.name, freq=self.freq)
 
     @Appender(DatetimeLikeArrayMixin._time_shift.__doc__)
     def _time_shift(self, periods, freq=None):

@@ -14,8 +14,9 @@ from pandas.util._decorators import Appender
 
 from pandas.core.dtypes.common import (
     _TD_DTYPE, ensure_int64, is_datetime64_dtype, is_float_dtype,
-    is_integer_dtype, is_list_like, is_object_dtype, is_string_dtype,
-    is_timedelta64_dtype)
+    is_int64_dtype, is_integer_dtype, is_list_like, is_object_dtype,
+    is_string_dtype, is_timedelta64_dtype, is_timedelta64_ns_dtype,
+    pandas_dtype)
 from pandas.core.dtypes.generic import ABCSeries, ABCTimedeltaIndex
 from pandas.core.dtypes.missing import isna
 
@@ -103,6 +104,7 @@ def _td_array_cmp(cls, op):
 
 class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
     _typ = "timedeltaarray"
+    _scalar_type = Timedelta
     # define my properties & methods for delegation
     _other_ops = []
     _bool_ops = []
@@ -142,6 +144,9 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
         return result
 
     def __new__(cls, values, freq=None, dtype=_TD_DTYPE):
+
+        if freq is None and isinstance(values, cls):
+            freq = values.freq
 
         freq, freq_infer = dtl.maybe_infer_freq(freq)
 
@@ -195,6 +200,15 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
     # ----------------------------------------------------------------
     # Array-Like / EA-Interface Methods
 
+    def __array__(self, dtype=None):
+        # TODO: Check PeriodArray.__array__ and push to parent
+        if is_object_dtype(dtype):
+            return np.array(list(self), dtype=object)
+        elif is_int64_dtype(dtype):
+            return self.asi8
+
+        return self._data
+
     @Appender(dtl.DatetimeLikeArrayMixin._validate_fill_value.__doc__)
     def _validate_fill_value(self, fill_value):
         if isna(fill_value):
@@ -205,6 +219,18 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
             raise ValueError("'fill_value' should be a Timedelta. "
                              "Got '{got}'.".format(got=fill_value))
         return fill_value
+
+    @classmethod
+    def _from_sequence(cls, scalars, dtype=None, copy=False):
+        from pandas import to_timedelta
+        data = to_timedelta(scalars)
+        if copy:
+            data = data.copy()
+        return cls(data, dtype=dtype)
+
+    def _check_compatible_with(self, other):
+        # we don't have anything to validate.
+        pass
 
     # ----------------------------------------------------------------
     # Arithmetic Methods
@@ -376,6 +402,31 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
         datetimes : ndarray
         """
         return tslibs.ints_to_pytimedelta(self.asi8)
+
+    def astype(self, dtype, copy=True):
+        # We handle
+        # --> timedelta64[ns]
+        # --> timedelta64
+        dtype = pandas_dtype(dtype)
+
+        if is_timedelta64_dtype(dtype) and not is_timedelta64_ns_dtype(dtype):
+            # essentially this is division
+            result = self._data.astype(dtype, copy=copy)
+            if self.hasnans:
+                values = self._maybe_mask_results(result,
+                                                  fill_value=None,
+                                                  convert='float64')
+                return values
+            return result.astype('i8')
+        elif is_timedelta64_ns_dtype(dtype):
+            # TODO: Figure out why this was needed.
+            if copy:
+                return self.copy()
+            return self
+        return super(TimedeltaArrayMixin, self).astype(dtype, copy=copy)
+
+    def _format_native_types(self):
+        return self.astype(object)
 
     days = _field_accessor("days", "days",
                            " Number of days for each element. ")

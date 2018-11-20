@@ -188,21 +188,6 @@ class DatetimeIndex(DatelikeIndexMixin,
     """
     _typ = 'datetimeindex'
     _join_precedence = 10
-    # TODO: dispatch
-
-    @classmethod
-    def _generate_range(cls, start, end, periods, freq, tz=None,
-                        normalize=False, ambiguous="raise",
-                        closed=None):
-        return cls._simple_new(
-            DatetimeArray._generate_range(
-                start, end, periods, freq, tz=tz,
-                normalize=normalize, ambiguous=ambiguous,
-                closed=closed,
-            )
-        )
-    _box_func = DatetimeArray._box_func
-    _box_values = DatetimeArray._box_values
 
     def _join_i8_wrapper(joinf, **kwargs):
         return DatetimeIndexOpsMixin._join_i8_wrapper(joinf, dtype='M8[ns]',
@@ -234,6 +219,8 @@ class DatetimeIndex(DatelikeIndexMixin,
     _object_ops = DatetimeArray._object_ops
     _field_ops = DatetimeArray._field_ops
 
+    _box_func = DatetimeArray._box_func
+    _box_values = DatetimeArray._box_values
     _local_timestamps = DatetimeArray._local_timestamps
     _validate_frequency = DatetimeArray._validate_frequency
     to_pydatetime = DatetimeArray.to_pydatetime
@@ -365,13 +352,27 @@ class DatetimeIndex(DatelikeIndexMixin,
         result._reset_identity()
         return result
 
+    @classmethod
+    def _generate_range(cls, start, end, periods, freq, tz=None,
+                        normalize=False, ambiguous="raise",
+                        closed=None):
+        return cls._simple_new(
+            DatetimeArray._generate_range(
+                start, end, periods, freq, tz=tz,
+                normalize=normalize, ambiguous=ambiguous,
+                closed=closed,
+            )
+        )
+
     @property
     def values(self):
+        # TODO: Check period and move to Parent
         return self._data._data
     # --------------------------------------------------------------------
 
     @property
     def _values(self):
+        # TODO: Check period and move to Parent
         return self._data
 
     @property

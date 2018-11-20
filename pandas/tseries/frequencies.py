@@ -23,7 +23,7 @@ from pandas.util._decorators import cache_readonly
 
 from pandas.core.dtypes.common import (
     is_datetime64_dtype, is_period_arraylike, is_timedelta64_dtype)
-from pandas.core.dtypes.generic import ABCSeries
+from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
 
 from pandas.core.algorithms import unique
 
@@ -294,8 +294,10 @@ class _FrequencyInferer(object):
         if len(index) < 3:
             raise ValueError('Need at least 3 dates to infer frequency')
 
-        self.is_monotonic = (self.index.is_monotonic_increasing or
-                             self.index.is_monotonic_decreasing)
+        # TODO: try to recover this property for TDA
+        self.is_monotonic = (isinstance(self.index, ABCIndexClass) and
+                             (self.index.is_monotonic_increasing or
+                              self.index.is_monotonic_decreasing))
 
     @cache_readonly
     def deltas(self):
@@ -322,7 +324,8 @@ class _FrequencyInferer(object):
         -------
         freqstr : str or None
         """
-        if not self.is_monotonic or not self.index.is_unique:
+        if (isinstance(self.index, ABCIndexClass) and
+                (not self.is_monotonic or not self.index.is_unique)):
             return None
 
         delta = self.deltas[0]
