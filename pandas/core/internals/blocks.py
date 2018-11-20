@@ -2821,8 +2821,8 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
 class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
     """ implement a datetime64 block with a tz attribute """
     __slots__ = ()
-    _concatenator = staticmethod(_concat._concat_datetime)
     is_datetimetz = True
+    is_extension = True
 
     def __init__(self, values, placement, ndim=2, dtype=None):
         # XXX: This will end up calling _maybe_coerce_values twice
@@ -2962,30 +2962,6 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
     def _box_func(self):
         return lambda x: tslibs.Timestamp(x, tz=self.dtype.tz)
 
-    def shift(self, periods, axis=0):
-        """ shift the block by periods """
-
-        # think about moving this to the DatetimeIndex. This is a non-freq
-        # (number of periods) shift ###
-
-        N = len(self)
-        indexer = np.zeros(N, dtype=int)
-        if periods > 0:
-            indexer[periods:] = np.arange(N - periods)
-        else:
-            indexer[:periods] = np.arange(-periods, N)
-
-        new_values = self.values.asi8.take(indexer)
-
-        if periods > 0:
-            new_values[:periods] = tslibs.iNaT
-        else:
-            new_values[periods:] = tslibs.iNaT
-
-        new_values = self.values._shallow_copy(new_values)
-        return [self.make_block_same_class(new_values,
-                                           placement=self.mgr_locs)]
-
     def diff(self, n, axis=0):
         """1st discrete difference
 
@@ -3014,15 +2990,8 @@ class DatetimeTZBlock(NonConsolidatableMixIn, DatetimeBlock):
         new_values = new_values.astype('timedelta64[ns]')
         return [TimeDeltaBlock(new_values, placement=self.mgr_locs.indexer)]
 
-    def concat_same_type(self, to_concat, placement=None):
-        """
-        Concatenate list of single blocks of the same type.
-        """
-        values = self._concatenator([blk.values for blk in to_concat],
-                                    axis=self.ndim - 1)
-        # not using self.make_block_same_class as values can be non-tz dtype
-        return make_block(
-            values, placement=placement or slice(0, len(values), 1))
+    shift = ExtensionBlock.shift
+    concat_same_type = ExtensionBlock.concat_same_type
 
 
 # -----------------------------------------------------------------

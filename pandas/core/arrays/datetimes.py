@@ -440,7 +440,10 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
 
     @Appender(dtl.DatetimeLikeArrayMixin._validate_fill_value.__doc__)
     def _validate_fill_value(self, fill_value):
-        if isna(fill_value):
+        # TODO: Right now DatetimeTZBlock.fill_value is iNaT.
+        # There's some confuction about whether Block.fill_value should
+        # be the NA value or the storage value.
+        if isna(fill_value) or fill_value == iNaT:
             fill_value = iNaT
         elif isinstance(fill_value, (datetime, np.datetime64)):
             self._assert_tzawareness_compat(fill_value)

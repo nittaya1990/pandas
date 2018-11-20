@@ -427,6 +427,7 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
         return self._simple_new(result, **attribs)
 
     def __setitem__(self, key, value):
+        # TODO: this could use self._validate_fill_value
         if is_list_like(value):
             if len(key) != len(value) and not com.is_bool_indexer(key):
                 msg = ("shape mismatch: value array of length '{}' does not "
@@ -446,7 +447,10 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
                 value = value.value
             else:
                 raise ValueError('todo')
-        elif isna(value):
+        elif isna(value) or value == iNaT:
+            # TODO: Right now DatetimeTZBlock.fill_value is iNaT.
+            # There's some confuction about whether Block.fill_value should
+            # be the NA value or the storage value.
             value = iNaT
         else:
             msg = (

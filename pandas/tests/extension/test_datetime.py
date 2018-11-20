@@ -86,7 +86,20 @@ class TestDatetimeDtype(BaseDatetimeTests, base.BaseDtypeTests):
 
 
 class TestConstructors(BaseDatetimeTests, base.BaseConstructorsTests):
-    pass
+
+    tz_block = pytest.mark.xfail(reason="DatetimeTZBlock", strict=True)
+
+    @tz_block
+    def test_series_constructor(self, data):
+        super().test_series_constructor(data)
+
+    @tz_block
+    def test_dataframe_constructor_from_dict(self, data, from_series):
+        return super().test_dataframe_constructor_from_dict(data, from_series)
+
+    @tz_block
+    def test_dataframe_from_series(self, data):
+        super().test_dataframe_from_series(data)
 
 
 class TestGetitem(BaseDatetimeTests, base.BaseGetitemTests):
@@ -126,6 +139,42 @@ class TestInterface(BaseDatetimeTests, base.BaseInterfaceTests):
 
 class TestArithmeticOps(BaseDatetimeTests, base.BaseArithmeticOpsTests):
     implements = {'__sub__', '__rsub__'}
+
+    @pytest.mark.xfail(reason="timedelta", strict=False)
+    def test_arith_series_with_scalar(self, data, all_arithmetic_operators):
+        # TODO: move this to the base class?
+        # It's duplicated between Period and Datetime now
+        if all_arithmetic_operators in self.implements:
+            s = pd.Series(data)
+            self.check_opname(s, all_arithmetic_operators, s.iloc[0],
+                              exc=None)
+        else:
+            # ... but not the rest.
+            super(TestArithmeticOps, self).test_arith_series_with_scalar(
+                data, all_arithmetic_operators
+            )
+
+    def test_add_series_with_extension_array(self, data):
+        # Datetime + Datetime not implemented
+        s = pd.Series(data)
+        msg = 'cannot add DatetimeArray(Mixin)? and DatetimeArray(Mixin)?'
+        with pytest.raises(TypeError, match=msg):
+            s + data
+
+    @pytest.mark.xfail(reason="timedelta", strict=False)
+    def test_arith_series_with_array(self, data, all_arithmetic_operators):
+        if all_arithmetic_operators in self.implements:
+            s = pd.Series(data)
+            self.check_opname(s, all_arithmetic_operators, s.iloc[0],
+                              exc=None)
+        else:
+            # ... but not the rest.
+            super(TestArithmeticOps, self).test_arith_series_with_scalar(
+                data, all_arithmetic_operators
+            )
+
+    def test_error(self, data, all_arithmetic_operators):
+        pass
 
 
 class TestCasting(BaseDatetimeTests, base.BaseCastingTests):
