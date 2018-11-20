@@ -188,6 +188,12 @@ class TestComparisonOps(BaseDatetimeTests, base.BaseComparisonOpsTests):
         # with (some) integers, depending on the value.
         pass
 
+    @pytest.mark.xfail(reason="TODO", strict=True)
+    def test_direct_arith_with_series_returns_not_implemented(self, data):
+        return super().test_direct_arith_with_series_returns_not_implemented(
+            data
+        )
+
 
 class TestMissing(BaseDatetimeTests, base.BaseMissingTests):
     pass
