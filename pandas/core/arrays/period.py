@@ -4,41 +4,33 @@ import operator
 
 import numpy as np
 
-from pandas import compat
-from pandas.compat.numpy import function as nv
 from pandas._libs.tslib import NaT, iNaT
-from pandas._libs.tslibs.period import (
-    Period, IncompatibleFrequency, DIFFERENT_FREQ_INDEX,
-    get_period_field_arr, period_asfreq_arr,
-)
 from pandas._libs.tslibs import period as libperiod
-from pandas._libs.tslibs.timedeltas import delta_to_nanoseconds, Timedelta
 from pandas._libs.tslibs.fields import isleapyear_arr
-from pandas.util._decorators import cache_readonly, Appender
+from pandas._libs.tslibs.period import (
+    DIFFERENT_FREQ_INDEX, IncompatibleFrequency, Period, get_period_field_arr,
+    period_asfreq_arr)
+from pandas._libs.tslibs.timedeltas import Timedelta, delta_to_nanoseconds
+import pandas.compat as compat
+from pandas.compat.numpy import function as nv
+from pandas.util._decorators import Appender, cache_readonly
 from pandas.util._validators import validate_fillna_kwargs
-import pandas.core.algorithms as algos
-from pandas.core.dtypes.common import (
-    is_float_dtype, is_period_dtype,
-    pandas_dtype,
-    is_datetime64_dtype,
-    is_array_like,
-    ensure_object,
-    _TD_DTYPE,
-    is_datetime64tz_dtype, is_datetime64_any_dtype)
-from pandas.core.dtypes.dtypes import PeriodDtype
-from pandas.core.dtypes.generic import (
-    ABCSeries, ABCIndexClass, ABCPeriodIndex
-)
-from pandas.core.dtypes.missing import isna, notna
-from pandas.core.missing import pad_1d, backfill_1d
 
+from pandas.core.dtypes.common import (
+    _TD_DTYPE, ensure_object, is_array_like, is_datetime64_any_dtype,
+    is_datetime64_dtype, is_datetime64tz_dtype, is_float_dtype,
+    is_period_dtype, pandas_dtype)
+from pandas.core.dtypes.dtypes import PeriodDtype
+from pandas.core.dtypes.generic import ABCIndexClass, ABCPeriodIndex, ABCSeries
+from pandas.core.dtypes.missing import isna, notna
+
+import pandas.core.algorithms as algos
+from pandas.core.arrays import ExtensionArray, datetimelike as dtl
 import pandas.core.common as com
+from pandas.core.missing import backfill_1d, pad_1d
 
 from pandas.tseries import frequencies
 from pandas.tseries.offsets import Tick
-
-from pandas.core.arrays import ExtensionArray
-from pandas.core.arrays import datetimelike as dtl
 
 
 def _field_accessor(name, alias, docstring=None):
