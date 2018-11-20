@@ -206,6 +206,13 @@ class TestReshaping(BaseDatetimeTests, base.BaseReshapingTests):
     def test_concat(self, data, in_frame):
         return super().test_concat(data, in_frame)
 
+    @pytest.mark.xfail(reason="GH-23816", strict=True)
+    def test_concat_mixed_dtypes(self, data):
+        # concat(Series[datetimetz], Series[category]) uses a
+        # plain np.array(values) on the DatetimeArray, which
+        # drops the tz.
+        pass
+
 
 class TestSetitem(BaseDatetimeTests, base.BaseSetitemTests):
     pass
