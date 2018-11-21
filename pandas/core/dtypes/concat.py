@@ -430,8 +430,7 @@ def _concat_datetime(to_concat, axis=0, typs=None):
     if any(typ.startswith('datetime') for typ in typs):
 
         if 'datetime' in typs:
-            to_concat = [np.array(x, copy=False).view(np.int64)
-                         for x in to_concat]
+            to_concat = [x.astype(np.int64, copy=False) for x in to_concat]
             return _concatenate_2d(to_concat, axis=axis).view(_NS_DTYPE)
         else:
             # when to_concat has different tz, len(typs) > 1.
@@ -439,8 +438,8 @@ def _concat_datetime(to_concat, axis=0, typs=None):
             return _concat_datetimetz(to_concat)
 
     elif 'timedelta' in typs:
-        return _concatenate_2d([x.view(np.int64) for x in to_concat],
-                               axis=axis).view(_TD_DTYPE)
+        to_concat = [x.astype(np.int64, copy=False) for x in to_concat]
+        return _concatenate_2d(to_concat, axis=axis).view(_TD_DTYPE)
 
     elif any(typ.startswith('period') for typ in typs):
         assert len(typs) == 1

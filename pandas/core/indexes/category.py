@@ -14,7 +14,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_interval_dtype,
     is_scalar)
-from pandas.core.dtypes.missing import array_equivalent, isna
+from pandas.core.dtypes.missing import isna
 from pandas.core.algorithms import take_1d
 
 
@@ -282,7 +282,13 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
 
         try:
             other = self._is_dtype_compat(other)
-            return array_equivalent(self._data, other)
+            # changed from array_equivalent to avoid a ValueError
+            # from trying to convert NaT.
+            # This should also be faster, since we don't coerce to
+            # arryays
+            if isinstance(other, type(self)):
+                other = other._data
+            return self._data.equals(other)
         except (TypeError, ValueError):
             pass
 

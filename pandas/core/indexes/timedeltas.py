@@ -34,6 +34,9 @@ from pandas.tseries.frequencies import to_offset
 
 class TimedeltaDelegateMixin(DatetimelikeDelegateMixin):
     _delegate_class = TimedeltaArray
+    _raw_methods = {
+        'to_pytimedelta',
+    }
 
 
 @delegate_names(TimedeltaArray,
