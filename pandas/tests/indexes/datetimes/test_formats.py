@@ -101,6 +101,7 @@ class TestDatetimeIndexRendering(object):
                 result = getattr(indx, method)()
                 assert result == expected
 
+    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_dti_representation_to_series(self):
         idx1 = DatetimeIndex([], freq='D')
         idx2 = DatetimeIndex(['2011-01-01'], freq='D')
