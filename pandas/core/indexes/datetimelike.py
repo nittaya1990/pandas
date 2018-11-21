@@ -31,7 +31,6 @@ import pandas.io.formats.printing as printing
 _index_doc_kwargs = dict(ibase._index_doc_kwargs)
 
 
-# TODO: not sure about inheriting here.
 class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     """ common ops mixin to support a unified interface datetimelike Index """
 
