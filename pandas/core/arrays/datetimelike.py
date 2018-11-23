@@ -1175,6 +1175,42 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
         result[mask] = filler
         return result
 
+    def _reduce(self, name, skipna=True, **kwargs):
+        op = getattr(self, name, None)
+        if op:
+            return op(skipna=skipna)
+        else:
+            return super()._reduce(name, skipna, **kwargs)
+
+    # --------------------------------------------------------------
+    # Reductions
+
+    def any(self, skipna=True):
+        if skipna:
+            values = self[~self.isnan]
+        else:
+            values = self
+
+        # TODO: Should any period be considered Falsey?
+        return len(values)
+
+    def all(self, skipna=True):
+        return not self.all(skipna=skipna)
+
+    def min(self, skipna=True):
+        if skipna:
+            values = self[~self._isnan]
+        else:
+            values = self
+        return self._box_func(values.asi8.min())
+
+    def max(self, skipna=True):
+        if skipna:
+            values = self[~self._isnan]
+        else:
+            values = self
+        return self._box_func(values.asi8.min())
+
 
 DatetimeLikeArrayMixin._add_comparison_ops()
 

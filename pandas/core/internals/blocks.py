@@ -2223,6 +2223,9 @@ class TimeDeltaBlock(DatetimeLikeBlockMixin, IntBlock):
                                        dtype=object)
         return rvalues
 
+    def external_values(self, dtype=None):
+        return np.asarray(self.values.astype("timedelta64[ns]", copy=False))
+
 
 class BoolBlock(NumericBlock):
     __slots__ = ()
@@ -2785,6 +2788,9 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
 
         self.values[locs] = values
 
+    def external_values(self):
+        return np.asarray(self.values.astype('datetime64[ns]', copy=False))
+
 
 class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
     """ implement a datetime64 block with a tz attribute """
@@ -2849,12 +2855,6 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         if deep:
             values = values.copy(deep=True)
         return self.make_block_same_class(values)
-
-    def external_values(self):
-        """ we internally represent the data as a DatetimeIndex, but for
-        external compat with ndarray, export as a ndarray of Timestamps
-        """
-        return np.asarray(self.values.astype('datetime64[ns]'))
 
     def get_values(self, dtype=None):
         # return object dtype as Timestamps with the zones

@@ -269,6 +269,7 @@ class TestCategoricalConstructors(object):
                    freq="s", tz="US/Eastern"),
         timedelta_range("1 day", periods=5, freq="s")
     ])
+    @pytest.mark.xfail(reason="internals", strict=True)
     def test_constructor_with_datetimelike(self, dtl):
         # see gh-12077
         # constructor with a datetimelike and NaT

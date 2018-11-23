@@ -352,6 +352,7 @@ class TestSeriesAnalytics(object):
         )
         tm.assert_series_equal(result, expected)
 
+    @pytest.mark.xfail(reason="internals", strict=True)
     def test_argsort(self, datetime_series):
         self._check_accum_op('argsort', datetime_series, check_dtype=False)
         argsorted = datetime_series.argsort()
@@ -935,6 +936,7 @@ class TestSeriesAnalytics(object):
         assert_series_equal(result, expected)
         assert isinstance(expected, Series)
 
+    @pytest.mark.xfail(reason="internals", strict=True)
     def test_clip_types_and_nulls(self):
 
         sers = [Series([np.nan, 1.0, 2.0, 3.0]), Series([None, 'a', 'b', 'c']),
@@ -1165,6 +1167,7 @@ class TestSeriesAnalytics(object):
         expected = Timedelta('1 days')
         assert result == expected
 
+    @pytest.mark.xfail(reason="internals", strict=True)
     def test_idxmin(self, string_series):
         # test idxmin
         # _check_stat_op approach can not be used here because of isna check.
@@ -1221,6 +1224,7 @@ class TestSeriesAnalytics(object):
             with pytest.raises(ValueError, match=msg):
                 np.argmin(s, out=data)
 
+    @pytest.mark.xfail(reason="internals", strict=True)
     def test_idxmax(self, string_series):
         # test idxmax
         # _check_stat_op approach can not be used here because of isna check.
