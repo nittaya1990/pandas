@@ -507,10 +507,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
             values = np.array([formatter(dt) for dt in values])
         return values
 
-    # Delegation...
-    def strftime(self, date_format):
-        return self._format_native_types(date_format=date_format)
-
     def repeat(self, repeats, *args, **kwargs):
         """
         Repeat elements of a PeriodArray.

@@ -87,6 +87,7 @@ class DatelikeOps(ExtensionOpsMixin):
 
     def strftime(self, date_format):
         return self.format(date_format=date_format)
+
     strftime.__doc__ = """
     Convert to Index using specified date_format.
 
@@ -511,6 +512,9 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
 
     def _formatting_values(self):
         return np.array(self, dtype=object)
+
+    def strftime(self, date_format):
+        return self._format_native_types(date_format=date_format)
 
     # ------------------------------------------------------------------
     # ExtensionArray Interface
@@ -1197,19 +1201,28 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     def all(self, skipna=True):
         return not self.all(skipna=skipna)
 
-    def min(self, skipna=True):
+    def _values_for_reduction(self, skipna=True):
         if skipna:
             values = self[~self._isnan]
         else:
             values = self
-        return self._box_func(values.asi8.min())
+        return values.asi8
+
+    def min(self, skipna=True):
+        # TODO: Deduplicate with Datetimelike.
+        # they get to take some shortcuts based on monotonicity.
+        i8 = self._values_for_reduction(skipna=skipna)
+        if len(i8):
+            return self._box_func(i8.min())
+        else:
+            return NaT
 
     def max(self, skipna=True):
-        if skipna:
-            values = self[~self._isnan]
+        i8 = self._values_for_reduction(skipna=skipna)
+        if len(i8):
+            return self._box_func(i8.max())
         else:
-            values = self
-        return self._box_func(values.asi8.min())
+            return NaT
 
 
 DatetimeLikeArrayMixin._add_comparison_ops()

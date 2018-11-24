@@ -134,11 +134,14 @@ class TimedeltaIndex(DatetimeIndexOpsMixin,
 
     _freq = None
 
+    # TODO: Deduplicate with DatetimeIndex by doing these as props on base
     _box_func = TimedeltaArray._box_func
+    _box_values = TimedeltaArray._box_values
     _validate_frequency = TimedeltaArray._validate_frequency
     _bool_ops = TimedeltaArray._bool_ops
     _object_ops = TimedeltaArray._object_ops
     _field_ops = TimedeltaArray._field_ops
+    _datetimelike_ops = TimedeltaArray._datetimelike_ops
 
     def __new__(cls, data=None, unit=None, freq=None, start=None, end=None,
                 periods=None, closed=None, dtype=None, copy=False,

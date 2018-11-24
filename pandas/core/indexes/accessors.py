@@ -263,7 +263,7 @@ class TimedeltaProperties(Properties):
         3     0      0        0        3             0             0            0
         4     0      0        0        4             0             0            0
         """  # noqa: E501
-        return self._get_values().components.set_index(self.index)
+        return self._get_values()._data.components.set_index(self.index)
 
     @property
     def freq(self):

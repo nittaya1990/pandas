@@ -217,6 +217,7 @@ class DatetimeIndex(DatelikeIndexMixin,
     _bool_ops = DatetimeArray._bool_ops
     _object_ops = DatetimeArray._object_ops
     _field_ops = DatetimeArray._field_ops
+    _datetimelike_ops = DatetimeArray._datetimelike_ops
 
     _box_func = DatetimeArray._box_func
     _box_values = DatetimeArray._box_values

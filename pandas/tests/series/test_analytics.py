@@ -1224,7 +1224,6 @@ class TestSeriesAnalytics(object):
             with pytest.raises(ValueError, match=msg):
                 np.argmin(s, out=data)
 
-    @pytest.mark.xfail(reason="internals", strict=True)
     def test_idxmax(self, string_series):
         # test idxmax
         # _check_stat_op approach can not be used here because of isna check.

@@ -33,11 +33,12 @@ from pandas.core.dtypes.missing import (
     _isna_compat, array_equivalent, is_null_datelike_scalar, isna, notna)
 
 import pandas.core.algorithms as algos
-from pandas.core.arrays import Categorical, DatetimeArrayMixin as DatetimeArray
+from pandas.core.arrays import (
+    Categorical, DatetimeArrayMixin as DatetimeArray,
+    TimedeltaArrayMixin as TimedeltaArray)
 from pandas.core.base import PandasObject
 import pandas.core.common as com
 from pandas.core.indexes.datetimes import DatetimeIndex
-from pandas.core.indexes.timedeltas import TimedeltaIndex
 from pandas.core.indexing import check_setitem_lengths
 import pandas.core.missing as missing
 
@@ -2094,7 +2095,7 @@ class IntBlock(NumericBlock):
 
 
 class DatetimeLikeBlockMixin(object):
-    """Mixin class for DatetimeBlock and DatetimeTZBlock."""
+    """Mixin class for DatetimeBlock, DatetimeTZBlock, and TimedeltaBlock."""
 
     @property
     def _holder(self):
@@ -2112,6 +2113,24 @@ class DatetimeLikeBlockMixin(object):
         # TODO(DatetimeBlock): remove
         return np.asarray(self.values)
 
+    def get_values(self, dtype=None):
+        """
+        return object dtype as boxed values, such as Timestamps/Timedelta
+        """
+        if is_object_dtype(dtype):
+            values = self.values
+
+            if self.ndim > 1:
+                values = values.ravel()
+
+            values = lib.map_infer(values, self._box_func)
+
+            if self.ndim > 1:
+                values = values.reshape(self.values.shape)
+
+            return values
+        return self.values
+
 
 class TimeDeltaBlock(DatetimeLikeBlockMixin, IntBlock):
     __slots__ = ()
@@ -2122,13 +2141,15 @@ class TimeDeltaBlock(DatetimeLikeBlockMixin, IntBlock):
     def __init__(self, values, placement, ndim=None):
         if values.dtype != _TD_DTYPE:
             values = conversion.ensure_timedelta64ns(values)
-
+        if isinstance(values, TimedeltaArray):
+            values = values._data
+        assert isinstance(values, np.ndarray), type(values)
         super(TimeDeltaBlock, self).__init__(values,
                                              placement=placement, ndim=ndim)
 
     @property
     def _holder(self):
-        return TimedeltaIndex
+        return TimedeltaArray
 
     @property
     def _box_func(self):
@@ -2651,6 +2672,10 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         super(DatetimeBlock, self).__init__(values,
                                             placement=placement, ndim=ndim)
 
+    @property
+    def asi8(self):
+        return self.values.view('i8')
+
     def _maybe_coerce_values(self, values):
         """Input validation for values passed to __init__. Ensure that
         we have datetime64ns, coercing if necessary.
@@ -2668,6 +2693,11 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         """
         if values.dtype != _NS_DTYPE:
             values = conversion.ensure_datetime64ns(values)
+
+        if isinstance(values, DatetimeArray):
+            values = values._data
+
+        assert isinstance(values, np.ndarray), type(values)
         return values
 
     def _astype(self, dtype, **kwargs):
@@ -2677,11 +2707,10 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         """
         # TODO: I think that most of this can be dispatched to the
         # values and removed.
+        dtype = pandas_dtype(dtype)
 
         # if we are passed a datetime64[ns, tz]
         if is_datetime64tz_dtype(dtype):
-            dtype = DatetimeTZDtype(dtype)
-
             values = self.values
             if getattr(values, 'tz', None) is None:
                 values = DatetimeIndex(values).tz_localize('UTC')
@@ -2765,7 +2794,8 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
 
         # Note: changed from .view('i8') since values is now a DatetimeArray
         result = tslib.format_array_from_datetime(
-            values.asi8.ravel(), tz=getattr(self.values, 'tz', None),
+            values.astype('i8', copy=False).ravel(),
+            tz=getattr(self.values, 'tz', None),
             format=format, na_rep=na_rep).reshape(values.shape)
         return np.atleast_2d(result)
 
@@ -2815,6 +2845,10 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
     def _holder(self):
         return DatetimeArray
 
+    @property
+    def asi8(self):
+        return self.values.asi8
+
     def _maybe_coerce_values(self, values, dtype=None):
         """Input validation for values passed to __init__. Ensure that
         we have datetime64TZ, coercing if necessary.
@@ -2862,7 +2896,7 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         if is_object_dtype(dtype):
             return (values._box_values(values._data)
                     .reshape(self.values.shape))
-        return self.values.values
+        return self.values
 
     def _slice(self, slicer):
         """ return a slice of my values """
@@ -2886,8 +2920,8 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         -------
         base-type values, base-type other
         """
-        # asi8 is a view, needs copy
-        values = _block_shape(values.asi8, ndim=self.ndim)
+        values = _block_shape(values.astype('i8', copy=False),
+                              ndim=self.ndim)
 
         if isinstance(other, ABCSeries):
             other = self._holder(other)

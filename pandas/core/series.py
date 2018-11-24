@@ -4234,6 +4234,7 @@ def _sanitize_array(data, index, dtype=None, copy=False,
     dtype if specified
     """
 
+    # import pdb; pdb.set_trace()
     if dtype is not None:
         dtype = pandas_dtype(dtype)
 

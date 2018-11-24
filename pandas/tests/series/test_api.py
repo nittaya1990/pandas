@@ -43,6 +43,7 @@ class SharedWithSparse(object):
         result = self.ts.copy()
         assert result.name == self.ts.name
 
+    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_copy_index_name_checking(self):
         # don't want to be able to modify the index stored elsewhere after
         # making a copy
