@@ -184,7 +184,6 @@ class DatetimeIndex(DatelikeIndexMixin,
     TimedeltaIndex : Index of timedelta64 data.
     PeriodIndex : Index of Period data.
     pandas.to_datetime : Convert argument to datetime.
-
     """
     _typ = 'datetimeindex'
     _join_precedence = 10
@@ -572,7 +571,6 @@ class DatetimeIndex(DatelikeIndexMixin,
     def snap(self, freq='S'):
         """
         Snap time stamps to nearest occurring frequency
-
         """
         # Superdumb, punting on any optimizing
         freq = to_offset(freq)
