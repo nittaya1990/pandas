@@ -3,7 +3,6 @@ from datetime import date, datetime, timedelta
 import functools
 import operator
 
-from dateutil.easter import easter
 import numpy as np
 
 from pandas._libs.tslibs import (
@@ -18,8 +17,9 @@ from pandas.compat import range
 from pandas.errors import AbstractMethodError
 from pandas.util._decorators import cache_readonly
 
-from pandas.core.dtypes.generic import ABCPeriod
+from pandas.core.dtypes.generic import ABCIndexClass, ABCPeriod
 
+from dateutil.easter import easter
 from pandas.core.tools.datetimes import to_datetime
 
 __all__ = ['Day', 'BusinessDay', 'BDay', 'CustomBusinessDay', 'CDay',
@@ -531,17 +531,21 @@ class BusinessDay(BusinessMixin, SingleConstructorOffset):
         # to_period rolls forward to next BDay; track and
         # reduce n where it does when rolling forward
         asper = i.to_period('B')
+        if isinstance(asper, ABCIndexClass):
+            # TODO: Check if this is hit now.
+            asper = asper._data
+
         if self.n > 0:
             shifted = (i.to_perioddelta('B') - time).asi8 != 0
 
             # Integer-array addition is deprecated, so we use
             # _time_shift directly
             roll = np.where(shifted, self.n - 1, self.n)
-            shifted = asper._data._addsub_int_array(roll, operator.add)
+            shifted = asper._addsub_int_array(roll, operator.add)
         else:
             # Integer addition is deprecated, so we use _time_shift directly
             roll = self.n
-            shifted = asper._data._time_shift(roll)
+            shifted = asper._time_shift(roll)
 
         result = shifted.to_timestamp() + time
         return result

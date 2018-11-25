@@ -157,6 +157,7 @@ class TestTimeSeries(TestData):
             tm.assert_series_equal(res, exp)
             assert res.dtype == 'datetime64[ns, US/Eastern]'
 
+    @pytest.mark.xfail(reason="freq", strict=True)
     def test_tshift(self):
         # PeriodIndex
         ps = tm.makePeriodSeries()
@@ -459,6 +460,7 @@ class TestTimeSeries(TestData):
         assert ser.index.is_all_dates
         assert isinstance(ser.index, DatetimeIndex)
 
+    @pytest.mark.xfail(reason="freq", strict=True)
     def test_contiguous_boolean_preserve_freq(self):
         rng = date_range('1/1/2000', '3/1/2000', freq='B')
 

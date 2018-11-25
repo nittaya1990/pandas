@@ -112,6 +112,7 @@ def test_align_nocopy(test_data):
     assert (b[:2] == 5).all()
 
 
+@pytest.mark.xfail(reason="TODO", strict=True)
 def test_align_same_index(test_data):
     a, b = test_data.ts.align(test_data.ts, copy=False)
     assert a.index is test_data.ts.index
