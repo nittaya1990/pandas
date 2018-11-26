@@ -240,7 +240,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         if is_object_dtype(values):
             # kludge; dispatch until the DatetimeArray constructor is complete
             from pandas import DatetimeIndex
-            values = DatetimeIndex(values, freq=freq, tz=tz)
+            values = DatetimeIndex(values, freq=freq, tz=tz)._values
 
         if isinstance(values, ABCSeries):
             # extract to ndarray or DatetimeIndex

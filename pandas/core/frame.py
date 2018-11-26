@@ -4247,8 +4247,7 @@ class DataFrame(NDFrame):
                             values, mask, np.nan)
 
                     if issubclass(values_type, DatetimeLikeArray):
-                        values = values_type._simple_new(values,
-                                                         dtype=values_dtype)
+                        values = values_type(values, dtype=values_dtype)
 
             return values
 

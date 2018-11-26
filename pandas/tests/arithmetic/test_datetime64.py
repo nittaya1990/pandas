@@ -1328,7 +1328,7 @@ class TestTimestampSeriesArithmetic(object):
     @pytest.mark.parametrize('op', ['__add__', '__radd__',
                                     '__sub__', '__rsub__'])
     @pytest.mark.parametrize('tz', [None, 'Asia/Tokyo'])
-    @pytest.mark.xfail(reason="unclear behavior", strict=True)
+    @pytest.mark.xfail(reason="unclear behavior", strict=False)
     # TODO: What do we want here? We've deprecated adding integers to
     # DatetimeIndex. ATM, my branch is has the same behavior for
     # DatetimeArray. But Series expects us to raise. Messy, messy.
@@ -1578,7 +1578,7 @@ class TestDatetimeIndexArithmetic(object):
         result = dti - tdi
         tm.assert_index_equal(result, expected)
 
-        msg = 'cannot subtract .*TimedeltaIndex'
+        msg = 'cannot subtract .*Timedelta(Index|Array).*'
         with pytest.raises(TypeError, match=msg):
             tdi - dti
 
@@ -1586,7 +1586,7 @@ class TestDatetimeIndexArithmetic(object):
         result = dti - tdi.values
         tm.assert_index_equal(result, expected)
 
-        msg = 'cannot subtract DatetimeIndex from'
+        msg = 'cannot subtract Datetime(Index|Array).* from'
         with pytest.raises(TypeError, match=msg):
             tdi.values - dti
 
@@ -1602,7 +1602,7 @@ class TestDatetimeIndexArithmetic(object):
         result -= tdi
         tm.assert_index_equal(result, expected)
 
-        msg = 'cannot subtract .*TimedeltaIndex'
+        msg = 'cannot subtract .*Timedelta(Index|Array)'
         with pytest.raises(TypeError, match=msg):
             tdi -= dti
 
@@ -1613,7 +1613,7 @@ class TestDatetimeIndexArithmetic(object):
 
         msg = '|'.join(['cannot perform __neg__ with this index type:',
                         'ufunc subtract cannot use operands with types',
-                        'cannot subtract DatetimeIndex from'])
+                        'cannot subtract Datetime(Index|Array).* from'])
         with pytest.raises(TypeError, match=msg):
             tdi.values -= dti
 
@@ -1633,7 +1633,8 @@ class TestDatetimeIndexArithmetic(object):
     def test_add_datetimelike_and_dti(self, addend, tz):
         # GH#9631
         dti = DatetimeIndex(['2011-01-01', '2011-01-02']).tz_localize(tz)
-        msg = 'cannot add DatetimeIndex and {0}'.format(type(addend).__name__)
+        msg = ('cannot add Datetime(Index|Array).* and '
+               '{0}'.format(type(addend).__name__))
         with pytest.raises(TypeError, match=msg):
             dti + addend
         with pytest.raises(TypeError, match=msg):

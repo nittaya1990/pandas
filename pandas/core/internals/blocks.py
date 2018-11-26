@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 
 from pandas._libs import internals as libinternals, lib, tslib, tslibs
-from pandas._libs.tslibs import Timedelta, conversion
+from pandas._libs.tslibs import Timedelta, conversion, timezones
 import pandas.compat as compat
 from pandas.compat import range, zip
 from pandas.util._validators import validate_bool_kwarg
@@ -29,6 +29,7 @@ from pandas.core.dtypes.dtypes import (
     CategoricalDtype, DatetimeTZDtype, ExtensionDtype, PandasExtensionDtype)
 from pandas.core.dtypes.generic import (
     ABCDatetimeIndex, ABCExtensionArray, ABCIndexClass, ABCSeries)
+from pandas.core.dtypes.inference import is_scalar
 from pandas.core.dtypes.missing import (
     _isna_compat, array_equivalent, is_null_datelike_scalar, isna, notna)
 
@@ -3016,6 +3017,27 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
             return ObjectBlock(values, ndim=self.ndim, placement=placement)
         return super(DatetimeTZBlock, self).concat_same_type(to_concat,
                                                              placement)
+
+    def setitem(self, indexer, value):
+        # We need this since in the past we allowed upcasting to object
+        # when the timezones don't match. It's not clear whether this
+        # behavior is appropriate for all EAs.
+        maybe_tz = getattr(value, 'tz', None)
+        return_object = (
+            (maybe_tz
+             and not timezones.tz_compare(self.values.tz, maybe_tz)) or
+            (is_scalar(value)
+             and not isna(value)
+             and not (isinstance(value, self.values._scalar_type) and
+                      timezones.tz_compare(self.values.tz, maybe_tz)))
+        )
+
+        if return_object:
+            newb = make_block(self.values.astype(object),
+                              placement=self.mgr_locs,
+                              klass=ObjectBlock,)
+            return newb.setitem(indexer, value)
+        return super(DatetimeTZBlock, self).setitem(indexer, value)
 
 
 # -----------------------------------------------------------------

@@ -143,6 +143,8 @@ class TimedeltaIndex(DatetimeIndexOpsMixin,
     _field_ops = TimedeltaArray._field_ops
     _datetimelike_ops = TimedeltaArray._datetimelike_ops
 
+    components = TimedeltaArray.components
+
     def __new__(cls, data=None, unit=None, freq=None, start=None, end=None,
                 periods=None, closed=None, dtype=None, copy=False,
                 name=None, verify_integrity=True):

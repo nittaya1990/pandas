@@ -275,7 +275,7 @@ class DateOffset(BaseOffset):
                        kwds.get('months', 0)) * self.n)
             if months:
                 shifted = liboffsets.shift_months(i.asi8, months)
-                i = i._shallow_copy(shifted)
+                i = i._simple_new(shifted, freq=i.freq, tz=i.tz)
 
             weeks = (kwds.get('weeks', 0)) * self.n
             if weeks:
@@ -916,7 +916,8 @@ class MonthOffset(SingleConstructorOffset):
     @apply_index_wraps
     def apply_index(self, i):
         shifted = liboffsets.shift_months(i.asi8, self.n, self._day_opt)
-        return i._shallow_copy(shifted)
+        # TODO: seem slike this is duplicating the wrapping?
+        return i._simple_new(shifted)
 
 
 class MonthEnd(MonthOffset):
@@ -1116,7 +1117,7 @@ class SemiMonthOffset(DateOffset):
         # integer-array addition on PeriodIndex is deprecated,
         #  so we use _addsub_int_array directly
         asper = i.to_period('M')
-        shifted = asper._data._addsub_int_array(roll // 2, operator.add)
+        shifted = asper._addsub_int_array(roll // 2, operator.add)
         i = type(dti)(shifted.to_timestamp())
 
         # apply the correct day
@@ -1300,7 +1301,7 @@ class Week(DateOffset):
         if self.weekday is None:
             # integer addition on PeriodIndex is deprecated,
             #  so we use _time_shift directly
-            shifted = i.to_period('W')._data._time_shift(self.n)
+            shifted = i.to_period('W')._time_shift(self.n)
             return shifted.to_timestamp() + i.to_perioddelta('W')
         else:
             return self._end_apply_index(i)
@@ -1328,13 +1329,13 @@ class Week(DateOffset):
                             self.n, self.n - 1)
             # integer-array addition on PeriodIndex is deprecated,
             #  so we use _addsub_int_array directly
-            shifted = base_period._data._addsub_int_array(roll, operator.add)
+            shifted = base_period._addsub_int_array(roll, operator.add)
             base = shifted.to_timestamp(how='end')
         else:
             # integer addition on PeriodIndex is deprecated,
             #  so we use _time_shift directly
             roll = self.n
-            base = base_period._data._time_shift(roll).to_timestamp(how='end')
+            base = base_period._time_shift(roll).to_timestamp(how='end')
 
         return base + off + Timedelta(1, 'ns') - Timedelta(1, 'D')
 
@@ -1583,7 +1584,7 @@ class QuarterOffset(DateOffset):
     def apply_index(self, dtindex):
         shifted = liboffsets.shift_quarters(dtindex.asi8, self.n,
                                             self.startingMonth, self._day_opt)
-        return dtindex._shallow_copy(shifted)
+        return dtindex._simple_new(shifted)
 
 
 class BQuarterEnd(QuarterOffset):
@@ -1654,7 +1655,7 @@ class YearOffset(DateOffset):
         shifted = liboffsets.shift_quarters(dtindex.asi8, self.n,
                                             self.month, self._day_opt,
                                             modby=12)
-        return dtindex._shallow_copy(shifted)
+        return dtindex._simple_new(shifted)
 
     def onOffset(self, dt):
         if self.normalize and not _is_normalized(dt):

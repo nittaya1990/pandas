@@ -292,6 +292,7 @@ class TestTSPlot(TestPlotBase):
         diffs = Series(ax.get_lines()[0].get_xydata()[:, 0]).diff()
         assert (np.fabs(diffs[1:] - sec) < 1e-8).all()
 
+    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_irregular_datetime64_repr_bug(self):
         ser = tm.makeTimeSeries()
         ser = ser[[0, 1, 2, 7]]

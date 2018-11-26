@@ -183,6 +183,10 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
         if values.dtype == np.object_:
             values = array_to_timedelta64(values)
 
+        elif (is_timedelta64_dtype(values.dtype)
+              and not is_timedelta64_ns_dtype(values.dtype)):
+            values = values.astype("timedelta64[ns]")
+
         result = cls._simple_new(values, freq=freq)
         if freq_infer:
             result.freq = to_offset(result.inferred_freq)

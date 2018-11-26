@@ -575,7 +575,10 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def view(self, dtype=None, type=None):
         if dtype is None or dtype is __builtins__['type'](self):
-            return self
+            # Series.copy() eventually calls this. Need to call
+            # _shallow_copy here so that we don't propagate modifications
+            # to attributes like .index.name
+            return self._shallow_copy()
         return self._ndarray_values.view(dtype=dtype)
 
     @deprecate_kwarg(old_arg_name='n', new_arg_name='periods')
