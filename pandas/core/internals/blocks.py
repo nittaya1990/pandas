@@ -2891,7 +2891,13 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         return self.make_block_same_class(values)
 
     def get_values(self, dtype=None):
+        # TODO: We really need to pin down this type
+        # Previously it was Union[ndarray, DatetimeIndex]
+        # but now it's Union[ndarray, DatetimeArray]
+        # I suspect we really want ndarray, so we need to
+        # check with the callers....
         # return object dtype as Timestamps with the zones
+        # We added an asarray to BlockManager.as_array to work around this.
         values = self.values
         if is_object_dtype(dtype):
             return (values._box_values(values._data)
@@ -2995,6 +3001,21 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         new_values = new_values.reshape(1, len(new_values))
         new_values = new_values.astype('timedelta64[ns]')
         return [TimeDeltaBlock(new_values, placement=self.mgr_locs.indexer)]
+
+    def concat_same_type(self, to_concat, placement=None):
+        # need to handle concat([tz1, tz2]) here, since DatetimeArray
+        # only handles cases where all the tzs are the same.
+        # Instead of place the condition here, it could also go into the
+        # is_uniform_join_units check, but I'm not sure what is better.
+        if len(set(x.dtype for x in to_concat)) > 1:
+            values = _concat._concat_datetime([x.values for x in to_concat])
+            placement = placement or slice(0, len(values), 1)
+
+            if self.ndim > 1:
+                values = np.atleast_2d(values)
+            return ObjectBlock(values, ndim=self.ndim, placement=placement)
+        return super(DatetimeTZBlock, self).concat_same_type(to_concat,
+                                                             placement)
 
 
 # -----------------------------------------------------------------

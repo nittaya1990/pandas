@@ -491,6 +491,7 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
     str = '|M8[ns]'
     num = 101
     base = np.dtype('M8[ns]')
+    na_value = NaT
     _metadata = ('unit', 'tz')
     _match = re.compile(
         r"(datetime64|M8)\[(?P<unit>\w+),?\s?(?P<tz>.+)?\]"

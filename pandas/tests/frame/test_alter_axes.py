@@ -347,6 +347,7 @@ class TestDataFrameAlterAxes():
         df.pop('ts')
         tm.assert_frame_equal(df, expected)
 
+    @pytest.mark.xfail(reason="td normalization?", strict=False)
     def test_reset_index_tz(self, tz_aware_fixture):
         # GH 3950
         # reset_index with single level

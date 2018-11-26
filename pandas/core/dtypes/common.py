@@ -20,6 +20,8 @@ from pandas.core.dtypes.inference import (  # noqa:F401
     is_named_tuple, is_nested_list_like, is_number, is_re, is_re_compilable,
     is_scalar, is_sequence, is_string_like)
 
+from pandas import compat
+
 _POSSIBLY_CAST_DTYPES = {np.dtype(t).name
                          for t in ['O', 'int8', 'uint8', 'int16', 'uint16',
                                    'int32', 'uint32', 'int64', 'uint64']}
@@ -1862,7 +1864,10 @@ def _coerce_to_dtype(dtype):
         ordered = getattr(dtype, 'ordered', False)
         dtype = CategoricalDtype(categories=categories, ordered=ordered)
     elif is_datetime64tz_dtype(dtype):
-        dtype = DatetimeTZDtype(dtype)
+        if isinstance(dtype, compat.string_types):
+            dtype = DatetimeTZDtype.construct_from_string(dtype)
+        else:
+            dtype = DatetimeTZDtype(dtype)
     elif is_period_dtype(dtype):
         dtype = PeriodDtype(dtype)
     elif is_interval_dtype(dtype):

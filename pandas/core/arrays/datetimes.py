@@ -985,6 +985,11 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
             if getattr(self.dtype, 'tz', None) is None:
                 return self.tz_localize(new_tz)
             return self.tz_convert(new_tz)
+        elif is_datetime64tz_dtype(self.dtype) and self.dtype == dtype:
+            # TODO: add specific tests for each of these cases to arrays.
+            if copy:
+                return self.copy()
+            return self
         elif is_period_dtype(dtype):
             return self.to_period(freq=dtype.freq)
         return super(DatetimeArrayMixin, self).astype(dtype, copy)

@@ -12,7 +12,6 @@ from pandas import Index, Series, Timedelta, TimedeltaIndex, timedelta_range
 
 
 class TestVectorizedTimedelta(object):
-    @pytest.mark.xfail(reason="internals", strict=True)
     def test_tdi_total_seconds(self):
         # GH#10939
         # test index

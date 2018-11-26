@@ -252,7 +252,6 @@ class TestTimedeltaIndex(DatetimeLike):
         result = a.append(c)
         assert (result['B'] == td).all()
 
-    @pytest.mark.xfail(reason='TimedeltaBlock', strict=True)
     def test_fields(self):
         rng = timedelta_range('1 days, 10:11:12.100123456', periods=2,
                               freq='s')
