@@ -112,7 +112,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     @staticmethod
     def _join_i8_wrapper(joinf, dtype, with_indexers=True):
-        """ create the join wrapper methods """
+        """Create the join wrapper methods."""
         # TODO: see if this breaks period
         from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin
 
@@ -158,7 +158,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _box_values_as_index(self):
         """
-        return object Index which contains boxed values
+        Return object Index which contains boxed values.
         """
         # XXX: this is broken (not called) for PeriodIndex, which doesn't
         # define _box_values AFAICT
@@ -218,7 +218,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def sort_values(self, return_indexer=False, ascending=True):
         """
-        Return sorted copy of Index
+        Return sorted copy of Index.
         """
         if return_indexer:
             _as = self.argsort()
@@ -272,7 +272,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     @property
     def asobject(self):
-        """Return object Index which contains boxed values.
+        """
+        Return object Index which contains boxed values.
 
         .. deprecated:: 0.23.0
             Use ``astype(object)`` instead.
@@ -292,7 +293,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def tolist(self):
         """
-        return a list of the underlying data
+        Return a list of the underlying data.
         """
         return list(self.astype(object))
 
@@ -327,6 +328,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     def argmin(self, axis=None, *args, **kwargs):
         """
         Returns the indices of the minimum values along an axis.
+
         See `numpy.ndarray.argmin` for more information on the
         `axis` parameter.
 
@@ -377,6 +379,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     def argmax(self, axis=None, *args, **kwargs):
         """
         Returns the indices of the maximum values along an axis.
+
         See `numpy.ndarray.argmax` for more information on the
         `axis` parameter.
 
@@ -402,7 +405,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _format_attrs(self):
         """
-        Return a list of tuples of the (attr,formatted_value)
+        Return a list of tuples of the (attr,formatted_value).
         """
         attrs = super(DatetimeIndexOpsMixin, self)._format_attrs()
         for attrib in self._attributes:
@@ -415,8 +418,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _convert_scalar_indexer(self, key, kind=None):
         """
-        we don't allow integer or float indexing on datetime-like when using
-        loc
+        We don't allow integer or float indexing on datetime-like when using
+        loc.
 
         Parameters
         ----------
@@ -442,8 +445,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     @classmethod
     def _add_datetimelike_methods(cls):
         """
-        add in the datetimelike methods (as we may have to override the
-        superclass)
+        Add in the datetimelike methods (as we may have to override the
+        superclass).
         """
 
         def __add__(self, other):
@@ -474,7 +477,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
     def isin(self, values):
         """
         Compute boolean array of whether each index value is found in the
-        passed set of values
+        passed set of values.
 
         Parameters
         ----------
@@ -494,7 +497,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def repeat(self, repeats, *args, **kwargs):
         """
-        Analogous to ndarray.repeat
+        Analogous to ndarray.repeat.
         """
         nv.validate_repeat(args, kwargs)
         if is_period_dtype(self):
@@ -515,7 +518,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _summary(self, name=None):
         """
-        Return a summarized representation
+        Return a summarized representation.
 
         Parameters
         ----------
@@ -546,7 +549,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
     def _concat_same_dtype(self, to_concat, name):
         """
-        Concatenate to_concat which has the same class
+        Concatenate to_concat which has the same class.
         """
         attribs = self._get_attributes_dict()
         attribs['name'] = name
@@ -625,7 +628,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
 
 def _ensure_datetimelike_to_i8(other, to_utc=False):
     """
-    helper for coercing an input scalar or array to i8
+    Helper for coercing an input scalar or array to i8.
 
     Parameters
     ----------

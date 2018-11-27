@@ -172,6 +172,7 @@ def _convert_listlike_datetimes(arg, box, format, name=None, tz=None,
     """
     from pandas import DatetimeIndex
     from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
+    from pandas.core.arrays.datetimes import maybe_convert_dtype
 
     if isinstance(arg, (list, tuple)):
         arg = np.array(arg, dtype='O')
@@ -210,6 +211,11 @@ def _convert_listlike_datetimes(arg, box, format, name=None, tz=None,
         raise TypeError('arg must be a string, datetime, list, tuple, '
                         '1-d array, or Series')
 
+    # warn if passing timedelta64, raise for PeriodDtype
+    # NB: this must come after unit transformation
+    orig_arg = arg
+    arg, _ = maybe_convert_dtype(arg, copy=False)
+
     arg = ensure_object(arg)
     require_iso8601 = False
 
@@ -233,7 +239,10 @@ def _convert_listlike_datetimes(arg, box, format, name=None, tz=None,
             # shortcut formatting here
             if format == '%Y%m%d':
                 try:
-                    result = _attempt_YYYYMMDD(arg, errors=errors)
+                    # pass orig_arg as float-dtype may have been converted to
+                    # datetime64[ns]
+                    orig_arg = ensure_object(orig_arg)
+                    result = _attempt_YYYYMMDD(orig_arg, errors=errors)
                 except (ValueError, TypeError, tslibs.OutOfBoundsDatetime):
                     raise ValueError("cannot convert the input to "
                                      "'%Y%m%d' date format")
