@@ -470,8 +470,23 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
 
         return self._simple_new(result, **attribs)
 
-    def __setitem__(self, key, value):
-        # TODO: this could use self._validate_fill_value
+    def __setitem__(
+            self,
+            key,    # type: Union[int, Sequence[int], Sequence[bool], slice]
+            value,  # type: Union[NaTType, Scalar, Sequence[Scalar]]
+    ):
+        # type: (...) -> None
+        # I'm fudging the types a bit here. The "Scalar" above really depends
+        # on type(self). For PeriodArray, it's Period (or stuff coercible
+        # to a period in from_sequence). For DatetimeArray, it's Timestamp...
+        # I don't know if mypy can do that, possibly with Generics.
+        # https://mypy.readthedocs.io/en/latest/generics.html
+
+        # n.b. This is moved from PeriodArray with the following changes
+        # 1. added is_slice check (bug on master)
+        # 2. changed dedicated ctor (period_array) to _from_sequence
+        # 3. Changed freq checking to use `_check_compatible_with`
+        # 4. Handle `value=iNaT` (may be able to revert. Check internals.)
         if is_list_like(value):
             is_slice = isinstance(key, slice)
             if (not is_slice
@@ -488,12 +503,7 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
             value = value.asi8
         elif isinstance(value, self._scalar_type):
             self._check_compatible_with(value)
-            if self._scalar_type is Period:
-                value = value.ordinal
-            elif self._scalar_type is Timestamp:
-                value = value.value
-            else:
-                raise ValueError('todo')
+            value = self._unbox_scalar(value)
         elif isna(value) or value == iNaT:
             # TODO: Right now DatetimeTZBlock.fill_value is iNaT.
             # There's some confuction about whether Block.fill_value should
