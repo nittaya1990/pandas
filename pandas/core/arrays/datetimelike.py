@@ -69,6 +69,8 @@ def _make_comparison_op(cls, op):
 
 class AttributesMixin(object):
 
+    _scalar_types = (Period, Timestamp, Timedelta)
+
     @property
     def _attributes(self):
         # Inheriting subclass should implement _attributes as a list of strings
@@ -81,6 +83,59 @@ class AttributesMixin(object):
     def _get_attributes_dict(self):
         """return an attributes dict for my class"""
         return {k: getattr(self, k, None) for k in self._attributes}
+
+    @property
+    def _scalar_type(self):
+        """The scalar associated with this datelike
+
+        * PeriodArray : Period
+        * DatetimeArray : Timestamp
+        * TimedeltaArray : Timedelta
+        """
+        # type: # () -> Union[type, Tuple[type]]
+        raise AbstractMethodError(self)
+
+    def _scalar_from_string(self, value):
+        # type: (str) -> Union[Period, Timestamp, Timedelta]
+        raise AbstractMethodError(self)
+
+    def _unbox_scalar(self, value):
+        """
+        Unbox the integer value of a scalar `value`.
+
+        Parameters
+        ----------
+        value : Union[Period, Timestamp, Timedelta]
+
+        Returns
+        -------
+        int
+
+        Examples
+        --------
+        >>> self._unbox_scalar(Timedelta('10s'))  # DOCTEST: +SKIP
+        10000000000
+        """
+        # TODO: handle NAT?
+        raise AbstractMethodError(self)
+
+    def _check_compatible_with(self, other):
+        """
+        Verify that `self` and `other` are compatible.
+
+        Used in
+
+        * __setitem__
+
+        Parameters
+        ----------
+        other
+
+        Raises
+        ------
+        Exception
+        """
+        raise AbstractMethodError(self)
 
 
 class DatelikeOps(ExtensionOpsMixin):
@@ -453,24 +508,6 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
                                        typ=type(value).__name__))
         self._data[key] = value
 
-    def _check_compatible_with(self, other):
-        """
-        Verify that `self` and `other` are compatible.
-
-        Used in
-
-        * __setitem__
-
-        Parameters
-        ----------
-        other
-
-        Raises
-        ------
-        Exception
-        """
-        raise AbstractMethodError(self)
-
     def astype(self, dtype, copy=True):
         # Some notes on cases we don't have to handle:
         #   1. PeriodArray.astype handles period -> period
@@ -598,7 +635,23 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     # Additional array methods
     def searchsorted(self, value, side='left', sorter=None):
         # We need this so that np.searchsorted(Series[Datetimelike]) works
-        assert 0
+        # But this isn't part of the official EA interface.
+
+        if isinstance(value, compat.string_types):
+            value = self._scalar_from_string(value)
+
+        if not (isinstance(value, (self._scalar_type, type(self)))
+                or isna(value)):
+            msg = "Unexpected type for 'value': {}".format(type(value))
+            raise ValueError(msg)
+
+        self._check_compatible_with(value)
+        if isinstance(value, type(self)):
+            value = value.asi8
+        else:
+            value = self._unbox_scalar(value)
+
+        return self.asi8.searchsorted(value, side=side, sorter=sorter)
 
     # ------------------------------------------------------------------
     # Null Handling

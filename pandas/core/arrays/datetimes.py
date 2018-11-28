@@ -348,6 +348,22 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
         return cls._simple_new(index.asi8, freq=freq, tz=tz)
 
     # -----------------------------------------------------------------
+    # DatetimeLike Interface
+
+    def _unbox_scalar(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return value.value
+
+    def _scalar_from_string(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return Timestamp(value)
+
+    def _check_compatible_with(self, other):
+        # TODO: verify this.
+        if not timezones.tz_compare(self.tz, other.tz):
+            raise ValueError("Timezones don't match")
+
+    # -----------------------------------------------------------------
     # Descriptive Properties
 
     @property
@@ -443,11 +459,6 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
     def _ndarray_values(self):
         # TODO: Move to parent
         return self._data
-
-    def _check_compatible_with(self, other):
-        # TODO: verify this.
-        if not timezones.tz_compare(self.tz, other.tz):
-            raise ValueError("Timezones don't match")
 
     @Appender(dtl.DatetimeLikeArrayMixin._validate_fill_value.__doc__)
     def _validate_fill_value(self, fill_value):

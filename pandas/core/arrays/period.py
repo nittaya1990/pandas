@@ -241,6 +241,21 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
 
         return subarr, freq
 
+    # -----------------------------------------------------------------
+    # DatetimeLike Interface
+    def _unbox_scalar(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return value.ordinal
+
+    def _scalar_from_string(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return Period(value, freq=self.freq)
+
+    def _check_compatible_with(self, other):
+        if self.freqstr != other.freqstr:
+            msg = DIFFERENT_FREQ_INDEX.format(self.freqstr, other.freqstr)
+            raise IncompatibleFrequency(msg)
+
     # --------------------------------------------------------------------
     # Data / Attributes
 
@@ -539,10 +554,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
     # ------------------------------------------------------------------
     # DatetimeLikeMixin methods
 
-    def _check_compatible_with(self, other):
-        if self.freqstr != other.freqstr:
-            msg = DIFFERENT_FREQ_INDEX.format(self.freqstr, other.freqstr)
-            raise IncompatibleFrequency(msg)
     # ------------------------------------------------------------------
     # Arithmetic Methods
     _create_comparison_method = classmethod(_period_array_cmp)

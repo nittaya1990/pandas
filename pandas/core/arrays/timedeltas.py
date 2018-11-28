@@ -230,6 +230,20 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
 
         return cls._simple_new(index, freq=freq)
 
+    # -----------------------------------------------------------------
+    # DatetimeLike Interface
+    def _unbox_scalar(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return value.value
+
+    def _scalar_from_string(self, value):
+        assert isinstance(value, self._scalar_type), value
+        return Timedelta(value)
+
+    def _check_compatible_with(self, other):
+        # we don't have anything to validate.
+        pass
+
     # ----------------------------------------------------------------
     # Array-Like / EA-Interface Methods
 
@@ -260,10 +274,6 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
         if copy:
             data = data.copy()
         return cls(data, dtype=dtype)
-
-    def _check_compatible_with(self, other):
-        # we don't have anything to validate.
-        pass
 
     # ----------------------------------------------------------------
     # Arithmetic Methods
