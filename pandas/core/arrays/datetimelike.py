@@ -569,7 +569,6 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     # ------------------------------------------------------------------
     # ExtensionArray Interface
     # TODO:
-    #   * _from_sequence
     #   * argsort / _values_for_argsort
     #   * _reduce
 
@@ -627,6 +626,11 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     def _from_factorized(cls, values, original):
         return cls(values, dtype=original.dtype)
 
+    # ------------------------------------------------------------------
+    # Additional array methods
+    # These are not part of the EA API, but we implement them because
+    # pandas currently assumes they're there.
+
     def value_counts(self, dropna=False):
         from pandas import Series, Index
 
@@ -642,11 +646,7 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
                       name=result.index.name)
         return Series(result.values, index=index, name=result.name)
 
-    # Additional array methods
     def searchsorted(self, value, side='left', sorter=None):
-        # We need this so that np.searchsorted(Series[Datetimelike]) works
-        # But this isn't part of the official EA interface.
-
         if isinstance(value, compat.string_types):
             value = self._scalar_from_string(value)
 

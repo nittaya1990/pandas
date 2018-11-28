@@ -504,7 +504,8 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin, ExtensionArray):
 
     def _format_native_types(self, na_rep=u'NaT', date_format=None, **kwargs):
         """ actually format my specific types """
-        # TODO(DatetimeArray): remove
+        # TODO: https://github.com/pandas-dev/pandas/issues/23979
+        # needs a small refactor in period_format
         values = self.astype(object)
 
         if date_format:
