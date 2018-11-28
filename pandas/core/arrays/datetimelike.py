@@ -595,6 +595,11 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
                       name=result.index.name)
         return Series(result.values, index=index, name=result.name)
 
+    # Additional array methods
+    def searchsorted(self, value, side='left', sorter=None):
+        # We need this so that np.searchsorted(Series[Datetimelike]) works
+        assert 0
+
     # ------------------------------------------------------------------
     # Null Handling
 

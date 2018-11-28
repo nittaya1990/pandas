@@ -77,7 +77,7 @@ class ArrowBoolArray(ExtensionArray):
         return len(self._data)
 
     def astype(self, dtype, copy=True):
-        if dtype == self.dtype:
+        if isinstance(dtype, type(self.dtype)) and dtype == self.dtype:
             if copy:
                 return self.copy()
             return self
