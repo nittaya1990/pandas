@@ -371,7 +371,7 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
 
         Parameters
         ----------
-        arg : Unoin[DatetimeLikeArray, DatetimeIndexOpsMixin, ndarray]
+        arg : Union[DatetimeLikeArray, DatetimeIndexOpsMixin, ndarray]
         ambiguous : str, bool, or bool-ndarray, default 'raise'
         nonexistent : str, default 'raise'
         from_utc : bool, default False
