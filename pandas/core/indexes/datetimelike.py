@@ -149,6 +149,7 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
                           from_utc=False):
         tz = getattr(self, 'tz', None)
         # TODO: some things around boxing...
+        # What did I mean by that?
         if tz is not None:
             arg = self._values._ensure_localized(arg, ambiguous=ambiguous,
                                                  nonexistent=nonexistent,
@@ -164,30 +165,6 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
         # define _box_values AFAICT
         from pandas.core.index import Index
         return Index(self._box_values(self.asi8), name=self.name, dtype=object)
-
-    def _format_with_header(self, header, **kwargs):
-        return header + list(self._format_native_types(**kwargs))
-
-    def _deepcopy_if_needed(self, orig, copy=False):
-        # TODO: is this the right class?
-        # Override Index._deepcopy_if_needed, since _data is not an ndarray.
-        # what is orig here? ndarray or DatetimeArray, DatetimeIndex?
-        if copy:
-            if not isinstance(orig, np.ndarray):
-                # orig is a DatetimeIndex
-                orig = orig._data
-            orig = orig if orig.base is None else orig.base
-            own_data = self._data
-
-            if own_data._data.base is None:
-                new = own_data._data
-            else:
-                new = own_data._data.base
-
-            if orig is new:
-                return self.copy(deep=True)
-
-        return self
 
     @Appender(_index_shared_docs['__contains__'] % _index_doc_kwargs)
     def __contains__(self, key):
@@ -399,6 +376,12 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
             i8[mask] = 0
         return i8.argmax()
 
+    # --------------------------------------------------------------------
+    # Rendering Methods
+
+    def _format_with_header(self, header, **kwargs):
+        return header + list(self._format_native_types(**kwargs))
+
     @property
     def _formatter_func(self):
         raise AbstractMethodError(self)
@@ -415,6 +398,8 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
                     freq = "'%s'" % freq
                 attrs.append(('freq', freq))
         return attrs
+
+    # --------------------------------------------------------------------
 
     def _convert_scalar_indexer(self, key, kind=None):
         """
@@ -571,6 +556,27 @@ class DatetimeIndexOpsMixin(ExtensionOpsMixin):
         # be removed. Currently used in
         # - sort_values
         return values
+
+    def _deepcopy_if_needed(self, orig, copy=False):
+        # TODO: is this the right class?
+        # Override Index._deepcopy_if_needed, since _data is not an ndarray.
+        # what is orig here? ndarray or DatetimeArray, DatetimeIndex?
+        if copy:
+            if not isinstance(orig, np.ndarray):
+                # orig is a DatetimeIndex
+                orig = orig._data
+            orig = orig if orig.base is None else orig.base
+            own_data = self._data
+
+            if own_data._data.base is None:
+                new = own_data._data
+            else:
+                new = own_data._data.base
+
+            if orig is new:
+                return self.copy(deep=True)
+
+        return self
 
     def astype(self, dtype, copy=True):
         new_values = self._values.astype(dtype, copy=copy)
