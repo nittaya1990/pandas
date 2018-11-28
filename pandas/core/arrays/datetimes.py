@@ -1501,7 +1501,8 @@ def maybe_infer_tz(tz, inferred_tz):
         tz = inferred_tz
     elif inferred_tz is None:
         pass
-    elif not timezones.tz_compare(tz, inferred_tz):
+    elif not timezones.tz_compare(timezones.maybe_get_tz(tz), inferred_tz):
+        # TODO: figure out if / who should be normalizing user-provided tz
         raise TypeError('data is already tz-aware {inferred_tz}, unable to '
                         'set specified tz: {tz}'
                         .format(inferred_tz=inferred_tz, tz=tz))
@@ -1536,10 +1537,16 @@ def maybe_convert_dtype(data, copy):
         #  with integer dtypes.  See discussion in GH#23675
 
     elif is_timedelta64_dtype(data):
+        from pandas.core.arrays import TimedeltaArrayMixin
+
+        if isinstance(data, TimedeltaArrayMixin):
+            # no TimedeltaArray.view
+            data = data.asi8
+
+        data = data.view(_NS_DTYPE)
         warnings.warn("Passing timedelta64-dtype data is deprecated, will "
                       "raise a TypeError in a future version",
                       FutureWarning, stacklevel=3)
-        data = data.view(_NS_DTYPE)
 
     elif is_period_dtype(data):
         # Note: without explicitly raising here, PeriondIndex
