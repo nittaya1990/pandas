@@ -696,7 +696,6 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
 
         This is an internal routine
         """
-        # TODO: move to a mixin shared between DTI & DTA
 
         if self.hasnans:
             if convert:

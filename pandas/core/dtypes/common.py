@@ -22,8 +22,6 @@ from pandas.core.dtypes.inference import (  # noqa:F401
     is_named_tuple, is_nested_list_like, is_number, is_re, is_re_compilable,
     is_scalar, is_sequence, is_string_like)
 
-from pandas import compat
-
 _POSSIBLY_CAST_DTYPES = {np.dtype(t).name
                          for t in ['O', 'int8', 'uint8', 'int16', 'uint16',
                                    'int32', 'uint32', 'int64', 'uint64']}
@@ -1460,20 +1458,6 @@ def needs_i8_conversion(arr_or_dtype):
             is_period_dtype(arr_or_dtype))
 
 
-def convert_i8(arr):
-    from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin
-
-    if isinstance(arr, (ABCSeries, ABCIndexClass)):
-        arr = arr._values
-
-    if isinstance(arr, np.ndarray):
-        return arr.view('i8')
-    elif isinstance(arr, DatetimeLikeArrayMixin):
-        return arr.asi8
-    else:
-        raise TypeError("Unexpected type {}".format(type))
-
-
 def is_numeric_dtype(arr_or_dtype):
     """
     Check whether the provided array or dtype is of a numeric dtype.
@@ -1805,7 +1789,7 @@ def _coerce_to_dtype(dtype):
         ordered = getattr(dtype, 'ordered', False)
         dtype = CategoricalDtype(categories=categories, ordered=ordered)
     elif is_datetime64tz_dtype(dtype):
-        if isinstance(dtype, compat.string_types):
+        if isinstance(dtype, string_types):
             dtype = DatetimeTZDtype.construct_from_string(dtype)
         else:
             dtype = DatetimeTZDtype(dtype)

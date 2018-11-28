@@ -248,6 +248,7 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
     # Array-Like / EA-Interface Methods
 
     def __array__(self, dtype=None):
+        # https://github.com/pandas-dev/pandas/pull/23593
         # TODO: Check PeriodArray.__array__ and push to parent
         if is_object_dtype(dtype):
             return np.array(list(self), dtype=object)
