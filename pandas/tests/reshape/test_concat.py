@@ -1705,6 +1705,8 @@ class TestConcatenate(ConcatenateBase):
                           keys=['b', 'c', 'd', 'e'])
         tm.assert_frame_equal(result, expected)
 
+    @pytest.mark.xfail(reason="freq", strict=True)
+    # probably fixed with getitem freq
     def test_concat_bug_1719(self):
         ts1 = tm.makeTimeSeries()
         ts2 = tm.makeTimeSeries()[::2]

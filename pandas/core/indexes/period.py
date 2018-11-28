@@ -58,14 +58,18 @@ class PeriodDelegateMixin(DatetimelikeDelegateMixin):
     Delegate from PeriodIndex to PeriodArray.
     """
     _delegate_class = PeriodArray
+    _delegated_methods = (
+        set(PeriodArray._datetimelike_methods) -
+        {'asfreq', 'to_timestamp'} |
+        {'_addsub_int_array'}
+    )
 
 
 @delegate_names(PeriodArray,
                 PeriodArray._datetimelike_ops + ['size', 'asi8', 'shape'],
                 typ='property')
 @delegate_names(PeriodArray,
-                [x for x in PeriodArray._datetimelike_methods
-                 if x not in {"asfreq", "to_timestamp"}],
+                PeriodDelegateMixin._delegated_methods,
                 typ="method",
                 overwrite=True)
 class PeriodIndex(DatetimeIndexOpsMixin,
