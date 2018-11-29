@@ -1,5 +1,4 @@
 """ define extension dtypes """
-import inspect
 import re
 
 import numpy as np
@@ -8,8 +7,7 @@ import pytz
 from pandas._libs.interval import Interval
 from pandas._libs.tslibs import NaT, Period, Timestamp, timezones
 
-from pandas.core.dtypes.generic import (
-    ABCCategoricalIndex, ABCIndexClass, ABCSeries)
+from pandas.core.dtypes.generic import ABCCategoricalIndex, ABCIndexClass
 
 from pandas import compat
 
@@ -492,17 +490,33 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
         r"(datetime64|M8)\[(?P<unit>\w+),?\s?(?P<tz>.+)?\]"
     )
     _cache = {}
-    # TODO: restore caching?
-    # who cares though? np.dtype('datetime64[ns]') doesn't return a
-    # singleton
+    # TODO: restore caching? who cares though? It seems needlessly complex.
+    # np.dtype('datetime64[ns]') isn't a singleton
 
     def __init__(self, unit="ns", tz=None):
-        """ Create a new unit if needed, otherwise return from the cache
+        """
+        An ExtensionDtype for timezone-aware datetime data.
 
         Parameters
         ----------
-        unit : string unit that this represents, currently must be 'ns'
-        tz : string tz that this represents
+        unit : str, default "ns"
+            The precision of the datetime data. Currently limited
+            to ``"ns"``.
+        tz : str, int, or datetime.tzinfo
+            The timezone.
+
+        Raises
+        ------
+        pytz.UnknownTimeZoneError
+            When the requested timezone cannot be found.
+
+        Examples
+        --------
+        >>> pd.core.dtypes.dtypes.DatetimeTZDtype(tz='UTC')
+        datetime64[ns, UTC]
+
+        >>> pd.core.dtypes.dtypes.DatetimeTZDtype(tz='dateutil/US/Central')
+        datetime64[ns, tzfile('/usr/share/zoneinfo/US/Central')]
         """
         if isinstance(unit, DatetimeTZDtype):
             unit, tz = unit.unit, unit.tz
@@ -522,27 +536,30 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
 
     @property
     def unit(self):
+        """The precision of the datetime data."""
         return self._unit
 
     @property
     def tz(self):
+        """The timezone."""
         return self._tz
 
     @classmethod
-    def construct_array_type(cls):
-        """Return the array type associated with this dtype
-
-        Returns
-        -------
-        type
-        """
-        from pandas.core.arrays import DatetimeArrayMixin as DatetimeArray
-        return DatetimeArray
-
-    @classmethod
     def construct_from_string(cls, string):
-        """ attempt to construct this type from a string, raise a TypeError if
-        it's not possible
+        """
+        Construct a DatetimeTZDtype from a string.
+
+        Parameters
+        ----------
+        string : str
+            The string alias for this DatetimeTZDtype.
+            Should be formatted like ``datetime64[ns, <tz>]``,
+            where ``<tz>`` is the timezone name.
+
+        Examples
+        --------
+        >>> DatetimeTZDtype.construct_from_string('datetime64[ns, UTC]')
+        datetime64[ns, UTC]
         """
         msg = "could not construct DatetimeTZDtype"""
         try:
@@ -555,32 +572,12 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
         except ValueError:
             raise TypeError(msg)
 
-    @classmethod
-    def _from_arr_or_type(cls, arr_or_dtype):
-        if isinstance(arr_or_dtype, compat.text_type):
-            return cls.construct_from_string(arr_or_dtype)
-        if isinstance(arr_or_dtype, (ABCIndexClass, ABCSeries)):
-            arr_or_dtype = arr_or_dtype._values.dtype
-        elif (inspect.isclass(arr_or_dtype) and
-              issubclass(arr_or_dtype, np.datetime64)):
-            return DatetimeTZDtype()
-        elif hasattr(arr_or_dtype, 'dtype'):
-            arr_or_dtype = arr_or_dtype.dtype
-            # something like dtype("M8[ns]")
-            # convert to string, so we can check the precision
-            return cls.construct_from_string(str(arr_or_dtype))
-        return cls(arr_or_dtype)
-
     def __unicode__(self):
-        # format the tz
-        if self.tz:
-            return "datetime64[{unit}, {tz}]".format(unit=self.unit,
-                                                     tz=self.tz)
-        else:
-            return "datetime64[{unit}]".format(unit=self.unit)
+        return "datetime64[{unit}, {tz}]".format(unit=self.unit, tz=self.tz)
 
     @property
     def name(self):
+        """A string representation of the dtype."""
         return str(self)
 
     def __hash__(self):
@@ -597,11 +594,8 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
                 str(self.tz) == str(other.tz))
 
     def __getstate__(self):
+        # for pickle compat.
         return self.__dict__
-
-    @classmethod
-    def is_dtype(cls, dtype):
-        return super().is_dtype(dtype)
 
 
 class PeriodDtype(ExtensionDtype, PandasExtensionDtype):

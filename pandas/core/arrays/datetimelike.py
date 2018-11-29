@@ -1414,14 +1414,17 @@ def validate_tz_from_dtype(dtype, tz):
             try:
                 dtype = DatetimeTZDtype.construct_from_string(dtype)
             except TypeError:
-                return tz
+                # Things like `datetime64[ns]`, which is OK for the
+                # constructors, but also nonsense, which should be validated
+                # but not by us. We *do* allow non-existent tz errors to
+                # go through
+                pass
         dtz = getattr(dtype, 'tz', None)
         if dtz is not None:
             if tz is not None and not timezones.tz_compare(tz, dtz):
                 raise ValueError("cannot supply both a tz and a dtype"
                                  " with a tz")
-            elif tz is None:
-                tz = dtz
+            tz = dtz
     return tz
 
 

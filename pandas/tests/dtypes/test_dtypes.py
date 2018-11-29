@@ -156,11 +156,12 @@ class TestDatetimeTZDtype(Base):
         assert dtype == dtype2
         assert dtype2 == dtype
         assert dtype3 == dtype
-        assert dtype is dtype2
-        assert dtype2 is dtype
-        assert dtype3 is dtype
         assert hash(dtype) == hash(dtype2)
         assert hash(dtype) == hash(dtype3)
+
+        dtype4 = DatetimeTZDtype("ns", "US/Central")
+        assert dtype2 != dtype4
+        assert hash(dtype2) != hash(dtype4)
 
     def test_construction(self):
         pytest.raises(ValueError,
@@ -793,35 +794,38 @@ class TestCategoricalDtypeParametrized(object):
             dtype.update_dtype(bad_dtype)
 
 
-@pytest.mark.parametrize(
-    'dtype',
-    [CategoricalDtype, IntervalDtype,
-     DatetimeTZDtype])
+@pytest.mark.parametrize('dtype', [
+    CategoricalDtype,
+    IntervalDtype,
+])
 def test_registry(dtype):
     assert dtype in registry.dtypes
 
 
-@pytest.mark.parametrize('dtype', [PeriodDtype])
+@pytest.mark.parametrize('dtype', [
+    PeriodDtype,
+    DatetimeTZDtype,
+])
 def test_pandas_registry(dtype):
     assert dtype not in registry.dtypes
     assert dtype in _pandas_registry.dtypes
 
 
-@pytest.mark.parametrize(
-    'dtype, expected',
-    [('int64', None),
-     ('interval', IntervalDtype()),
-     ('interval[int64]', IntervalDtype()),
-     ('interval[datetime64[ns]]', IntervalDtype('datetime64[ns]')),
-     ('category', CategoricalDtype()),
-     ('datetime64[ns, US/Eastern]', DatetimeTZDtype('ns', 'US/Eastern'))])
+@pytest.mark.parametrize('dtype, expected', [
+    ('int64', None),
+    ('interval', IntervalDtype()),
+    ('interval[int64]', IntervalDtype()),
+    ('interval[datetime64[ns]]', IntervalDtype('datetime64[ns]')),
+    ('category', CategoricalDtype()),
+])
 def test_registry_find(dtype, expected):
     assert registry.find(dtype) == expected
 
 
-@pytest.mark.parametrize(
-    'dtype, expected',
-    [('period[D]', PeriodDtype('D'))])
+@pytest.mark.parametrize('dtype, expected', [
+    ('period[D]', PeriodDtype('D')),
+    ('datetime64[ns, US/Eastern]', DatetimeTZDtype('ns', 'US/Eastern')),
+])
 def test_pandas_registry_find(dtype, expected):
     assert _pandas_registry.find(dtype) == expected
 
