@@ -1403,7 +1403,6 @@ class TestTimestampSeriesArithmetic(object):
     # TODO: This next block of tests came from tests.series.test_operators,
     # needs to be de-duplicated and parametrized over `box` classes
 
-    @pytest.mark.xfail(reason="TODO", strict=False)
     def test_operators_datetimelike_invalid(self, all_arithmetic_operators):
         # these are all TypeEror ops
         op_str = all_arithmetic_operators
@@ -1414,10 +1413,11 @@ class TestTimestampSeriesArithmetic(object):
             # with 'operate' (from core/ops.py) for the ops that are not
             # defined
             op = getattr(get_ser, op_str, None)
-            # TODO: error message changed.
+            # TODO: error message changed. Do we care?
             # Previously, _validate_for_numeric_binop in core/indexes/base.py
-            # did this.
-            with pytest.raises(TypeError, match='operate|cannot|unsupported'):
+            # did this for us.
+            with pytest.raises(TypeError,
+                               match='operate|cannot|unsupported|ufunc'):
                 op(test_ser)
 
         # ## timedelta64 ###
@@ -1553,7 +1553,6 @@ class TestTimestampSeriesArithmetic(object):
     @pytest.mark.parametrize('op', ['__add__', '__radd__',
                                     '__sub__', '__rsub__'])
     @pytest.mark.parametrize('tz', [None, 'Asia/Tokyo'])
-    @pytest.mark.xfail(reason="unclear behavior", strict=False)
     # TODO: What do we want here? We've deprecated adding integers to
     # DatetimeIndex. ATM, my branch is has the same behavior for
     # DatetimeArray. But Series expects us to raise. Messy, messy.
