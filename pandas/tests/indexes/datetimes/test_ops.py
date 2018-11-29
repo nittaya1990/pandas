@@ -226,7 +226,6 @@ class TestDatetimeIndexOps(Ops):
                                       '2011-01-01 11:00'],
                                      freq='H', name='tzidx', tz='Asia/Tokyo')
                              ])
-    @pytest.mark.xfail(reason="freq attribute", strict=True)
     def test_order_with_freq(self, idx):
         ordered = idx.sort_values()
         tm.assert_index_equal(ordered, idx)
