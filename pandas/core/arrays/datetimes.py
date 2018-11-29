@@ -97,6 +97,9 @@ def _dt_array_cmp(cls, op):
 
     def wrapper(self, other):
         meth = getattr(dtl.DatetimeLikeArrayMixin, opname)
+        # TODO: return NotImplemented for Series / Index and let pandas unbox
+        # Right now, returning NotImplemented for Index fails because we
+        # go into the index implementation, which may be a bug?
 
         if isinstance(other, (datetime, np.datetime64, compat.string_types)):
             if isinstance(other, (datetime, np.datetime64)):

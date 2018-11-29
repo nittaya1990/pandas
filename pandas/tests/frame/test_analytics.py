@@ -1611,7 +1611,6 @@ class TestDataFrameAnalytics():
         result = df1.isin(df2)
         tm.assert_frame_equal(result, expected)
 
-    @pytest.mark.xfail(reason="TODO: empty dtype isin?", strict=True)
     def test_isin_empty_datetimelike(self):
         # GH 15473
         # This fails since empty.reindex(...) will produce floats.

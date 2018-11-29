@@ -74,9 +74,6 @@ def na_value():
     return pd.NaT
 
 
-skip_tz_block = pytest.mark.xfail(reason="DatetimeTZBlock", strict=True)
-
-
 # ----------------------------------------------------------------------------
 class BaseDatetimeTests(object):
     pass
@@ -130,7 +127,6 @@ class TestInterface(BaseDatetimeTests, base.BaseInterfaceTests):
 class TestArithmeticOps(BaseDatetimeTests, base.BaseArithmeticOpsTests):
     implements = {'__sub__', '__rsub__'}
 
-    @pytest.mark.xfail(reason="timedelta", strict=False)
     def test_arith_series_with_scalar(self, data, all_arithmetic_operators):
         # TODO: move this to the base class?
         # It's duplicated between Period and Datetime now
@@ -151,7 +147,6 @@ class TestArithmeticOps(BaseDatetimeTests, base.BaseArithmeticOpsTests):
         with pytest.raises(TypeError, match=msg):
             s + data
 
-    @pytest.mark.xfail(reason="timedelta", strict=False)
     def test_arith_series_with_array(self, data, all_arithmetic_operators):
         if all_arithmetic_operators in self.implements:
             s = pd.Series(data)
@@ -166,6 +161,17 @@ class TestArithmeticOps(BaseDatetimeTests, base.BaseArithmeticOpsTests):
     def test_error(self, data, all_arithmetic_operators):
         pass
 
+    @pytest.mark.xfail(reason="Not Implemented", strict=False)
+    def test_direct_arith_with_series_returns_not_implemented(self, data):
+        # Right now, we have trouble with this. Returning NotImplemented
+        # fails other tests like
+        # tests/arithmetic/test_datetime64::TestTimestampSeriesArithmetic::
+        # test_dt64_seris_add_intlike
+        return super(
+            TestArithmeticOps,
+            self
+        ).test_direct_arith_with_series_returns_not_implemented(data)
+
 
 class TestCasting(BaseDatetimeTests, base.BaseCastingTests):
     pass
@@ -178,11 +184,12 @@ class TestComparisonOps(BaseDatetimeTests, base.BaseComparisonOpsTests):
         # with (some) integers, depending on the value.
         pass
 
-    @pytest.mark.xfail(reason="TODO", strict=True)
+    @pytest.mark.xfail(reason="Not Implemented", strict=False)
     def test_direct_arith_with_series_returns_not_implemented(self, data):
-        return super().test_direct_arith_with_series_returns_not_implemented(
-            data
-        )
+        return super(
+            TestComparisonOps,
+            self
+        ).test_direct_arith_with_series_returns_not_implemented(data)
 
 
 class TestMissing(BaseDatetimeTests, base.BaseMissingTests):
@@ -191,9 +198,9 @@ class TestMissing(BaseDatetimeTests, base.BaseMissingTests):
 
 class TestReshaping(BaseDatetimeTests, base.BaseReshapingTests):
 
-    @skip_tz_block
+    @pytest.mark.skip(reason="We have DatetimeTZBlock")
     def test_concat(self, data, in_frame):
-        return super().test_concat(data, in_frame)
+        pass
 
     @pytest.mark.xfail(reason="GH-23816", strict=True)
     def test_concat_mixed_dtypes(self, data):
