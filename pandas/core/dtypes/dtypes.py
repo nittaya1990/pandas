@@ -552,8 +552,8 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
         -------
         type
         """
-        from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin
-        return DatetimeLikeArrayMixin
+        from pandas.core.arrays.datetimelike import DatetimeArrayMixin
+        return DatetimeArrayMixin
 
     @classmethod
     def construct_from_string(cls, string):
