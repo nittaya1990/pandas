@@ -292,7 +292,6 @@ class TestTSPlot(TestPlotBase):
         diffs = Series(ax.get_lines()[0].get_xydata()[:, 0]).diff()
         assert (np.fabs(diffs[1:] - sec) < 1e-8).all()
 
-    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_irregular_datetime64_repr_bug(self):
         ser = tm.makeTimeSeries()
         ser = ser[[0, 1, 2, 7]]
@@ -755,8 +754,6 @@ class TestTSPlot(TestPlotBase):
         assert right >= pidx[-1].ordinal
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason='freq', strict=True)
-    # we mistakenly pass freq through the getitem
     def test_mixed_freq_irregular_first(self):
         s1 = tm.makeTimeSeries()
         s2 = s1[[0, 5, 10, 11, 12, 13, 14, 15]]
@@ -1302,7 +1299,6 @@ class TestTSPlot(TestPlotBase):
         tm.assert_numpy_array_equal(line2.get_xydata()[:, 0], exp)
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_irregular_ts_shared_ax_xlim(self):
         # GH 2960
         ts = tm.makeTimeSeries()[:20]
@@ -1369,7 +1365,6 @@ class TestTSPlot(TestPlotBase):
         assert right_before == right_after
 
     @pytest.mark.slow
-    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_secondary_y_irregular_ts_xlim(self):
         # GH 3490 - irregular-timeseries with secondary y
         ts = tm.makeTimeSeries()[:20]

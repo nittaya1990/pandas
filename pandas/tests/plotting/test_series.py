@@ -268,7 +268,6 @@ class TestSeriesPlots(TestPlotBase):
         axes = df.plot(rot=30, ax=ax)
         self._check_ticks_props(axes, xrot=30)
 
-    @pytest.mark.xfail(reason="TODO", strict=True)
     def test_irregular_datetime(self):
         rng = date_range('1/1/2000', '3/1/2000')
         rng = rng[[0, 1, 2, 3, 5, 9, 10, 11, 12]]

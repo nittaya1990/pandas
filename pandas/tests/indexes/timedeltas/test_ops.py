@@ -123,7 +123,6 @@ class TestTimedeltaIndexOps(Ops):
         assert 'foo' not in ts.__dict__.keys()
         pytest.raises(AttributeError, lambda: ts.foo)
 
-    @pytest.mark.xfail(reason="freq attribute", strict=True)
     def test_order(self):
         # GH 10295
         idx1 = TimedeltaIndex(['1 day', '2 day', '3 day'], freq='D',
