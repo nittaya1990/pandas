@@ -17,7 +17,7 @@ from pandas.compat import range
 from pandas.errors import AbstractMethodError
 from pandas.util._decorators import cache_readonly
 
-from pandas.core.dtypes.generic import ABCIndexClass, ABCPeriod
+from pandas.core.dtypes.generic import ABCPeriod
 
 from dateutil.easter import easter
 from pandas.core.tools.datetimes import to_datetime
@@ -275,14 +275,19 @@ class DateOffset(BaseOffset):
                        kwds.get('months', 0)) * self.n)
             if months:
                 shifted = liboffsets.shift_months(i.asi8, months)
-                i = i._simple_new(shifted, freq=i.freq, tz=i.tz)
+                # test out to see if master works.
+                # i = i._simple_new(shifted, freq=i.freq, tz=i.tz)
+                i = type(i)(shifted, freq=i.freq, dtype=i.dtype)
 
             weeks = (kwds.get('weeks', 0)) * self.n
             if weeks:
                 # integer addition on PeriodIndex is deprecated,
                 #   so we directly use _time_shift instead
                 asper = i.to_period('W')
-                shifted = asper._data._time_shift(weeks)
+                if not isinstance(asper._data, np.ndarray):
+                    # unwrap PeriodIndex --> PeriodArray
+                    asper = asper._data
+                shifted = asper._time_shift(weeks)
                 i = shifted.to_timestamp() + i.to_perioddelta('W')
 
             timedelta_kwds = {k: v for k, v in kwds.items()
@@ -539,8 +544,8 @@ class BusinessDay(BusinessMixin, SingleConstructorOffset):
         # to_period rolls forward to next BDay; track and
         # reduce n where it does when rolling forward
         asper = i.to_period('B')
-        if isinstance(asper, ABCIndexClass):
-            # TODO: Check if this is hit now.
+        if not isinstance(asper._data, np.ndarray):
+            # unwrap PeriodIndex --> PeriodArray
             asper = asper._data
 
         if self.n > 0:
@@ -931,7 +936,11 @@ class MonthOffset(SingleConstructorOffset):
     def apply_index(self, i):
         shifted = liboffsets.shift_months(i.asi8, self.n, self._day_opt)
         # TODO: seem slike this is duplicating the wrapping?
-        return i._simple_new(shifted)
+        # TODO: verify that master works, or do we need next line
+        # return i._simple_new(shifted)
+        # TODO: going through __new__ raises on call to _validate_frequency;
+        #  are we passing incorrect freq?
+        return type(i)._simple_new(shifted, freq=i.freq, tz=i.tz)
 
 
 class MonthEnd(MonthOffset):
@@ -1145,6 +1154,10 @@ class SemiMonthOffset(DateOffset):
         # integer-array addition on PeriodIndex is deprecated,
         #  so we use _addsub_int_array directly
         asper = i.to_period('M')
+        if not isinstance(asper._data, np.ndarray):
+            # unwrap PeriodIndex --> PeriodArray
+            asper = asper._data
+
         shifted = asper._addsub_int_array(roll // 2, operator.add)
         i = type(dti)(shifted.to_timestamp())
 
@@ -1334,7 +1347,12 @@ class Week(DateOffset):
         if self.weekday is None:
             # integer addition on PeriodIndex is deprecated,
             #  so we use _time_shift directly
-            shifted = i.to_period('W')._time_shift(self.n)
+            asper = i.to_period('W')
+            if not isinstance(asper._data, np.ndarray):
+                # unwrap PeriodIndex --> PeriodArray
+                asper = asper._data
+
+            shifted = asper._time_shift(self.n)
             return shifted.to_timestamp() + i.to_perioddelta('W')
         else:
             return self._end_apply_index(i)
@@ -1356,6 +1374,10 @@ class Week(DateOffset):
 
         base, mult = libfrequencies.get_freq_code(self.freqstr)
         base_period = dtindex.to_period(base)
+        if not isinstance(base_period._data, np.ndarray):
+            # unwrap PeriodIndex --> PeriodArray
+            base_period = base_period._data
+
         if self.n > 0:
             # when adding, dates on end roll to next
             normed = dtindex - off + Timedelta(1, 'D') - Timedelta(1, 'ns')
@@ -1622,7 +1644,10 @@ class QuarterOffset(DateOffset):
     def apply_index(self, dtindex):
         shifted = liboffsets.shift_quarters(dtindex.asi8, self.n,
                                             self.startingMonth, self._day_opt)
-        return dtindex._simple_new(shifted)
+        # TODO: going through __new__ raises on call to _validate_frequency;
+        #  are we passing incorrect freq?
+        return type(dtindex)._simple_new(shifted, freq=dtindex.freq,
+                                         tz=dtindex.tz)
 
 
 class BQuarterEnd(QuarterOffset):
@@ -1699,7 +1724,10 @@ class YearOffset(DateOffset):
         shifted = liboffsets.shift_quarters(dtindex.asi8, self.n,
                                             self.month, self._day_opt,
                                             modby=12)
-        return dtindex._simple_new(shifted)
+        # TODO: going through __new__ raises on call to _validate_frequency;
+        #  are we passing incorrect freq?
+        return type(dtindex)._simple_new(shifted, freq=dtindex.freq,
+                                         tz=dtindex.tz)
 
     def onOffset(self, dt):
         if self.normalize and not _is_normalized(dt):

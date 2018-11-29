@@ -16,7 +16,7 @@ from pandas.util import testing as tm
 class TestSlicing(object):
     @pytest.mark.xfail(reason="TODO", strict=True)
     def test_dti_slicing(self):
-        dti = DatetimeIndex(start='1/1/2005', end='12/1/2005', freq='M')
+        dti = date_range(start='1/1/2005', end='12/1/2005', freq='M')
         dti2 = dti[[1, 3, 5]]
 
         v1 = dti2[0]
@@ -75,8 +75,8 @@ class TestSlicing(object):
             ts.loc[::0]
 
     def test_slice_bounds_empty(self):
-        # GH 14354
-        empty_idx = DatetimeIndex(freq='1H', periods=0, end='2015')
+        # GH#14354
+        empty_idx = date_range(freq='1H', periods=0, end='2015')
 
         right = empty_idx._maybe_cast_slice_bound('2015-01-02', 'right', 'loc')
         exp = Timestamp('2015-01-02 23:59:59.999999999')
@@ -115,7 +115,7 @@ class TestSlicing(object):
         tm.assert_frame_equal(df.loc['2017-01-03'], expected)
 
     def test_slice_year(self):
-        dti = DatetimeIndex(freq='B', start=datetime(2005, 1, 1), periods=500)
+        dti = date_range(freq='B', start=datetime(2005, 1, 1), periods=500)
 
         s = Series(np.arange(len(dti)), index=dti)
         result = s['2005']
@@ -134,7 +134,7 @@ class TestSlicing(object):
         assert result == expected
 
     def test_slice_quarter(self):
-        dti = DatetimeIndex(freq='D', start=datetime(2000, 6, 1), periods=500)
+        dti = date_range(freq='D', start=datetime(2000, 6, 1), periods=500)
 
         s = Series(np.arange(len(dti)), index=dti)
         assert len(s['2001Q1']) == 90
@@ -143,7 +143,7 @@ class TestSlicing(object):
         assert len(df.loc['1Q01']) == 90
 
     def test_slice_month(self):
-        dti = DatetimeIndex(freq='D', start=datetime(2005, 1, 1), periods=500)
+        dti = date_range(freq='D', start=datetime(2005, 1, 1), periods=500)
         s = Series(np.arange(len(dti)), index=dti)
         assert len(s['2005-11']) == 30
 
@@ -153,7 +153,7 @@ class TestSlicing(object):
         tm.assert_series_equal(s['2005-11'], s['11-2005'])
 
     def test_partial_slice(self):
-        rng = DatetimeIndex(freq='D', start=datetime(2005, 1, 1), periods=500)
+        rng = date_range(freq='D', start=datetime(2005, 1, 1), periods=500)
         s = Series(np.arange(len(rng)), index=rng)
 
         result = s['2005-05':'2006-02']
@@ -174,7 +174,7 @@ class TestSlicing(object):
         pytest.raises(Exception, s.__getitem__, '2004-12-31')
 
     def test_partial_slice_daily(self):
-        rng = DatetimeIndex(freq='H', start=datetime(2005, 1, 31), periods=500)
+        rng = date_range(freq='H', start=datetime(2005, 1, 31), periods=500)
         s = Series(np.arange(len(rng)), index=rng)
 
         result = s['2005-1-31']
@@ -183,8 +183,8 @@ class TestSlicing(object):
         pytest.raises(Exception, s.__getitem__, '2004-12-31 00')
 
     def test_partial_slice_hourly(self):
-        rng = DatetimeIndex(freq='T', start=datetime(2005, 1, 1, 20, 0, 0),
-                            periods=500)
+        rng = date_range(freq='T', start=datetime(2005, 1, 1, 20, 0, 0),
+                         periods=500)
         s = Series(np.arange(len(rng)), index=rng)
 
         result = s['2005-1-1']
@@ -197,8 +197,8 @@ class TestSlicing(object):
         pytest.raises(Exception, s.__getitem__, '2004-12-31 00:15')
 
     def test_partial_slice_minutely(self):
-        rng = DatetimeIndex(freq='S', start=datetime(2005, 1, 1, 23, 59, 0),
-                            periods=500)
+        rng = date_range(freq='S', start=datetime(2005, 1, 1, 23, 59, 0),
+                         periods=500)
         s = Series(np.arange(len(rng)), index=rng)
 
         result = s['2005-1-1 23:59']
@@ -211,9 +211,9 @@ class TestSlicing(object):
         pytest.raises(Exception, s.__getitem__, '2004-12-31 00:00:00')
 
     def test_partial_slice_second_precision(self):
-        rng = DatetimeIndex(start=datetime(2005, 1, 1, 0, 0, 59,
-                                           microsecond=999990),
-                            periods=20, freq='US')
+        rng = date_range(start=datetime(2005, 1, 1, 0, 0, 59,
+                                        microsecond=999990),
+                         periods=20, freq='US')
         s = Series(np.arange(20), rng)
 
         tm.assert_series_equal(s['2005-1-1 00:00'], s.iloc[:10])
