@@ -2698,8 +2698,6 @@ class DatetimeBlock(DatetimeLikeBlockMixin, Block):
         these automatically copy, so copy=True has no effect
         raise on an except if raise == True
         """
-        # TODO: I think that most of this can be dispatched to the
-        # values and removed.
         dtype = pandas_dtype(dtype)
 
         # if we are passed a datetime64[ns, tz]

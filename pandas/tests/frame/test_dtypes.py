@@ -90,12 +90,10 @@ class TestDataFrameDataTypes(TestData):
         tzframe.iloc[1, 1] = pd.NaT
         tzframe.iloc[1, 2] = pd.NaT
         result = tzframe.dtypes.sort_index()
-        expected = Series([
-            np.dtype('datetime64[ns]'),
-            DatetimeTZDtype.construct_from_string(
-                'datetime64[ns, US/Eastern]'),
-            DatetimeTZDtype.construct_from_string('datetime64[ns, CET]')
-        ], ['A', 'B', 'C'])
+        expected = Series([np.dtype('datetime64[ns]'),
+                           DatetimeTZDtype('ns', 'US/Eastern]'),
+                           DatetimeTZDtype('ns', 'CET')],
+                          ['A', 'B', 'C'])
 
         assert_series_equal(result, expected)
 
