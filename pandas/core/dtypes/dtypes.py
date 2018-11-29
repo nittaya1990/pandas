@@ -552,7 +552,7 @@ class DatetimeTZDtype(PandasExtensionDtype, ExtensionDtype):
         -------
         type
         """
-        from pandas.core.arrays.datetimelike import DatetimeArrayMixin
+        from pandas.core.arrays import DatetimeArrayMixin
         return DatetimeArrayMixin
 
     @classmethod
