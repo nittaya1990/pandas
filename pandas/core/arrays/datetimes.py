@@ -1006,7 +1006,13 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin):
             new_tz = getattr(dtype, 'tz', None)
             if getattr(self.dtype, 'tz', None) is None:
                 return self.tz_localize(new_tz)
-            return self.tz_convert(new_tz)
+            result = self.tz_convert(new_tz)
+            if new_tz is None:
+                # Do we want .astype('datetime64[ns]') to be an ndarray.
+                # The astype in Block._astype expects this to return an
+                # ndarray, but we could maybe work around it there.
+                result = result._data
+            return result
         elif is_datetime64tz_dtype(self.dtype) and self.dtype == dtype:
             # TODO: add specific tests for each of these cases to arrays.
             if copy:

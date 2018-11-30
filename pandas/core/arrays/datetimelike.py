@@ -563,6 +563,9 @@ class DatetimeLikeArrayMixin(DatelikeOps, TimelikeOps,
     def _formatting_values(self):
         return np.array(self, dtype=object)
 
+    def _formatter(self, boxed=False):
+        return "'{}'".format
+
     def strftime(self, date_format):
         return self._format_native_types(date_format=date_format)
 

@@ -924,7 +924,6 @@ class TestDataFrameDatetimeWithTZ(TestData):
                                         tz='CET')]], dtype=object).T
         tm.assert_numpy_array_equal(result, expected)
 
-    @pytest.mark.xfail(reason="internals", strict=True)
     def test_astype(self):
         # astype
         expected = np.array([[Timestamp('2013-01-01 00:00:00'),

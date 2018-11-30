@@ -189,6 +189,8 @@ class TimedeltaIndex(DatetimeIndexOpsMixin,
         # - Cases checked above all return/raise before reaching here - #
         result = TimedeltaArray._from_sequence(data, freq=freq, unit=unit,
                                                dtype=dtype, copy=copy)
+        result = cls._simple_new(result, name=name, freq=freq)
+        return result
 
 # <<<<<<< HEAD
 #         data, inferred_freq = sequence_to_td64ns(data, copy=copy, unit=unit)
@@ -218,14 +220,15 @@ class TimedeltaIndex(DatetimeIndexOpsMixin,
 # =======
 #         result = cls._from_sequence(data, freq=freq, unit=unit,
 #                                     dtype=dtype, copy=copy)
-        result.name = name
-        return result
 
     @classmethod
     def _simple_new(cls, values, name=None, freq=None, dtype=_TD_DTYPE):
         # `dtype` is passed by _shallow_copy in corner cases, should always
         #  be timedelta64[ns] if present
-        values = TimedeltaArray(values, dtype=dtype, freq=freq)
+        if not isinstance(values, TimedeltaArray):
+            # TODO: make TimedeltaArray._simple_new idempotent?
+            values = TimedeltaArray._simple_new(values, dtype=dtype,
+                                                freq=freq)
         assert isinstance(values, TimedeltaArray), type(values)
         assert dtype == _TD_DTYPE, dtype
         assert values.dtype == 'm8[ns]', values.dtype
