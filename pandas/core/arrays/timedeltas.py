@@ -173,14 +173,21 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
         return result
 
     def __new__(cls, values, freq=None, dtype=_TD_DTYPE, copy=False):
+        return cls._from_sequence(values, freq=freq, dtype=dtype, copy=copy)
 
-        if freq is None and isinstance(values, cls):
-            freq = values.freq
+    @classmethod
+    def _from_sequence(cls, data, freq=None, unit=None,
+                       dtype=_TD_DTYPE, copy=False):
+        if dtype != _TD_DTYPE:
+            raise ValueError("Only timedelta64[ns] dtype is valid.")
 
         freq, freq_infer = dtl.maybe_infer_freq(freq)
 
-        values, inferred_freq = sequence_to_td64ns(
-            values, copy=copy, unit=None)
+        data, inferred_freq = sequence_to_td64ns(data, copy=copy, unit=unit)
+
+        # if freq is None and isinstance(data, cls):
+        #     freq = data.freq
+
         if inferred_freq is not None:
             if freq is not None and freq != inferred_freq:
                 raise ValueError('Inferred frequency {inferred} from passed '
@@ -192,17 +199,17 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
                 freq = inferred_freq
                 freq_infer = False
 
-        elif (is_timedelta64_dtype(values.dtype)
-              and not is_timedelta64_ns_dtype(values.dtype)):
-            values = values.astype("timedelta64[ns]")
+        # elif (is_timedelta64_dtype(values.dtype)
+        #       and not is_timedelta64_ns_dtype(values.dtype)):
+        #     values = values.astype("timedelta64[ns]")
 
-        result = cls._simple_new(values, freq=freq)
-        # check that we are matching freqs
-        if inferred_freq is None and len(result) > 0:
-            if freq is not None and not freq_infer:
-                cls._validate_frequency(result, freq)
+        result = cls._simple_new(data, freq=freq)
 
-        if freq_infer:
+        if inferred_freq is None and freq is not None:
+            # this condition precludes `freq_infer`
+            cls._validate_frequency(result, freq)
+
+        elif freq_infer:
             result.freq = to_offset(result.inferred_freq)
 
         return result
@@ -282,13 +289,6 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin):
                              "Got '{got}'.".format(got=fill_value))
         return fill_value
 
-    @classmethod
-    def _from_sequence(cls, scalars, dtype=None, copy=False):
-        from pandas import to_timedelta
-        data = to_timedelta(scalars)
-        if copy:
-            data = data.copy()
-        return cls(data, dtype=dtype)
     # monotonicity/uniqueness properties are called via frequencies.infer_freq,
     #  see GH#23789
 
@@ -739,7 +739,7 @@ def sequence_to_td64ns(data, copy=False, unit="ns", errors="raise"):
         warnings.warn("Passing datetime64-dtype data to TimedeltaIndex is "
                       "deprecated, will raise a TypeError in a future "
                       "version",
-                      FutureWarning, stacklevel=3)
+                      FutureWarning, stacklevel=4)
         data = ensure_int64(data).view(_TD_DTYPE)
 
     else:
