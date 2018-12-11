@@ -640,6 +640,7 @@ void NpyArr_iterBegin(JSOBJ _obj, JSONTypeContext *tc) {
     PyArrayObject *obj;
     NpyArrContext *npyarr;
 
+    PyErr_WarnEx(NULL, "NpyArr_iterBegin", 0);
     if (GET_TC(tc)->newObj) {
         obj = (PyArrayObject *)GET_TC(tc)->newObj;
     } else {
@@ -668,12 +669,15 @@ void NpyArr_iterBegin(JSOBJ _obj, JSONTypeContext *tc) {
         npyarr->type_num = PyArray_DESCR(obj)->type_num;
 
         if (GET_TC(tc)->transpose) {
+            PyErr_WarnEx(NULL, "NpyArr_iterBeging->transpose", 0);
+
             npyarr->dim = PyArray_DIM(obj, npyarr->ndim);
             npyarr->stride = PyArray_STRIDE(obj, npyarr->ndim);
             npyarr->stridedim = npyarr->ndim;
             npyarr->index[npyarr->ndim] = 0;
             npyarr->inc = -1;
         } else {
+            PyErr_WarnEx(NULL, "NpyArr_iterBeging->else", 0);
             npyarr->dim = PyArray_DIM(obj, 0);
             npyarr->stride = PyArray_STRIDE(obj, 0);
             npyarr->stridedim = 0;
@@ -683,6 +687,21 @@ void NpyArr_iterBegin(JSOBJ _obj, JSONTypeContext *tc) {
 
         npyarr->columnLabels = GET_TC(tc)->columnLabels;
         npyarr->rowLabels = GET_TC(tc)->rowLabels;
+        /*
+            Some notes here.
+
+            1. At this point we have
+
+             var       | bug.py | ok.py
+             --------- | ------ | -----
+             ndim      | 1      | 0
+             dim       | 2      | 1
+             stridedim | 1      | 1
+             stride    | 8      | 16
+             typenum   | 17     | 17
+
+        */
+        assert(1==0);
     }
 }
 
@@ -2111,6 +2130,9 @@ ISITERABLE:
                 goto INVALID;
             }
         } else if (enc->outputFormat == INDEX || enc->outputFormat == COLUMNS) {
+            //                    [     0,       1,     2,       3,      4]
+            // enum PANDAS_FORMAT { SPLIT, RECORDS, INDEX, COLUMNS, VALUES };
+            // and we are doing 3: columns
             PRINTMARK();
             tc->type = JT_OBJECT;
             tmpObj = (enc->outputFormat == INDEX
@@ -2159,6 +2181,7 @@ ISITERABLE:
                 PRINTMARK();
                 pc->transpose = 1;
             }
+//            assert (1==0);
         } else {
             goto INVALID;
         }

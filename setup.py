@@ -6,17 +6,23 @@ Parts of this file were taken from the pyzmq project
 BSD license. Parts are from lxml (https://github.com/lxml/lxml)
 """
 
+# The import of Extension must be after the import of Cython, otherwise
+# we do not get the appropriately patched class.
+# See https://cython.readthedocs.io/en/latest/src/reference/compilation.html
+from distutils.command.build import build  # noqa:E402
+from distutils.extension import Extension  # noqa:E402
+from distutils.version import LooseVersion
 import os
 from os.path import join as pjoin
+import shutil
+import sys
 
 import pkg_resources
-import sys
-import shutil
-from distutils.version import LooseVersion
-from setuptools import setup, Command, find_packages
+from setuptools import Command, find_packages, setup
 
 # versioning
 import versioneer
+
 cmdclass = versioneer.get_cmdclass()
 
 
@@ -46,11 +52,6 @@ except ImportError:
     _CYTHON_INSTALLED = False
     cythonize = lambda x, *args, **kwargs: x  # dummy func
 
-# The import of Extension must be after the import of Cython, otherwise
-# we do not get the appropriately patched class.
-# See https://cython.readthedocs.io/en/latest/src/reference/compilation.html
-from distutils.extension import Extension  # noqa:E402
-from distutils.command.build import build  # noqa:E402
 
 try:
     if not _CYTHON_INSTALLED:
@@ -700,8 +701,9 @@ ujson_ext = Extension('pandas._libs.json',
                       include_dirs=['pandas/_libs/src/ujson/python',
                                     'pandas/_libs/src/ujson/lib',
                                     'pandas/_libs/src/datetime'],
-                      extra_compile_args=(['-D_GNU_SOURCE'] +
-                                          extra_compile_args),
+                      extra_compile_args=['-g'],
+                      # extra_compile_args=(['-D_GNU_SOURCE'] +
+                      #                     extra_compile_args),
                       define_macros=macros)
 
 
