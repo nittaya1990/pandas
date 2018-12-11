@@ -154,7 +154,9 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin, dtl.TimelikeOps):
                 )
             values = values._data
 
-        assert isinstance(values, np.ndarray), type(values)
+        if not isinstance(values, np.ndarray):
+            msg = "'values' must be an ndarray. Got {} instead."
+            raise ValueError(msg.format(type(values).__name__))
 
         if values.dtype == 'i8':
             # for compat with datetime/timedelta/period shared methods,
@@ -162,8 +164,17 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin, dtl.TimelikeOps):
             #  nanosecond UTC (or tz-naive) unix timestamps
             values = values.view(_TD_DTYPE)
 
-        assert values.dtype == _TD_DTYPE
-        assert freq != "infer"
+        if values.dtype != _TD_DTYPE:
+            msg = (
+                "'dtype' must be 'm8[ns]'. Got '{}' instead."
+            )
+            raise ValueError(msg.format(values.dtype))
+        if freq == "infer":
+            msg = (
+                "Cannot pass 'freq=\"infer\"' to TimedeltaArray.__init__. "
+                "Use 'pd.array()' instead."
+            )
+            raise ValueError(msg)
 
         if copy:
             values = values.copy()
