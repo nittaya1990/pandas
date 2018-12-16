@@ -1905,7 +1905,7 @@ class NDFrame(PandasObject, SelectionMixin):
     #    values = self.values
     #    return dict(typestr=values.dtype.str,shape=values.shape,data=values)
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         """
         Return dense representation of NDFrame (as opposed to sparse).
         """
@@ -5305,7 +5305,7 @@ class NDFrame(PandasObject, SelectionMixin):
         # compat
         return self.values
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """
         Return an ndarray after converting sparse values to dense.
 
@@ -5348,7 +5348,7 @@ class NDFrame(PandasObject, SelectionMixin):
                [nan,  2.],
                [nan,  3.]])
         """
-        return self.values
+        return np.asarray(self.values, dtype=dtype)
 
     def get_dtype_counts(self):
         """

@@ -3605,7 +3605,7 @@ class Index(IndexOpsMixin, PandasObject):
         """
         return self._data
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """
         Return `Index` data as an `numpy.ndarray`.
 
@@ -3647,7 +3647,7 @@ class Index(IndexOpsMixin, PandasObject):
         >>> midx.get_values().ndim
         1
         """
-        return self.values
+        return np.asarray(self.values, dtype=dtype)
 
     @Appender(IndexOpsMixin.memory_usage.__doc__)
     def memory_usage(self, deep=False):

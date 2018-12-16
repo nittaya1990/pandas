@@ -107,6 +107,45 @@ class TestDatetimeArray(object):
         with pytest.raises(AttributeError, match='tz_localize'):
             arr.tz = 'UTC'
 
+    def test_array_interface_tz(self):
+        tz = "US/Central"
+        data = DatetimeArray(pd.date_range('2017', periods=2, tz=tz))
+        with tm.assert_produces_warning(None):
+            result = np.asarray(data)
+
+        expected = np.array([pd.Timestamp('2017-01-01T00:00:00', tz=tz),
+                             pd.Timestamp('2017-01-02T00:00:00', tz=tz)],
+                            dtype=object)
+        tm.assert_numpy_array_equal(result, expected)
+
+        # But no warning for the following
+        with tm.assert_produces_warning(None):
+            result = np.asarray(data, dtype=object)
+        tm.assert_numpy_array_equal(result, expected)
+
+        with tm.assert_produces_warning(None):
+            result = np.asarray(data, dtype='M8[ns]')
+
+        expected = np.array(['2017-01-01T06:00:00',
+                             '2017-01-02T06:00:00'], dtype="M8[ns]")
+        tm.assert_numpy_array_equal(result, expected)
+
+    def test_array_interface(self):
+        data = DatetimeArray(pd.date_range('2017', periods=2))
+        expected = np.array(['2017-01-01T00:00:00', '2017-01-02T00:00:00'],
+                            dtype='datetime64[ns]')
+
+        with tm.assert_produces_warning(None):
+            result = np.asarray(data)
+        tm.assert_numpy_array_equal(result, expected)
+
+        with tm.assert_produces_warning(None):
+            result = np.asarray(data, dtype=object)
+        expected = np.array([pd.Timestamp('2017-01-01T00:00:00'),
+                             pd.Timestamp('2017-01-02T00:00:00')],
+                            dtype=object)
+        tm.assert_numpy_array_equal(result, expected)
+
 
 class TestSequenceToDT64NS(object):
 

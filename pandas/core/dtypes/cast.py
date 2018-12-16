@@ -21,8 +21,7 @@ from .common import (
 from .dtypes import (
     DatetimeTZDtype, ExtensionDtype, PandasExtensionDtype, PeriodDtype)
 from .generic import (
-    ABCDatetimeArray, ABCDatetimeIndex, ABCPeriodArray, ABCPeriodIndex,
-    ABCSeries)
+    ABCDatetimeArray, ABCDatetimeIndex, ABCPeriodIndex, ABCSeries)
 from .inference import is_list_like
 from .missing import isna, notna
 
@@ -862,9 +861,7 @@ def maybe_infer_to_datetimelike(value, convert_dates=False):
 
     """
 
-    # TODO: why not timedelta?
-    if isinstance(value, (ABCDatetimeIndex, ABCPeriodIndex,
-                          ABCDatetimeArray, ABCPeriodArray)):
+    if isinstance(value, (ABCDatetimeIndex, ABCPeriodIndex, ABCDatetimeArray)):
         return value
     elif isinstance(value, ABCSeries):
         if isinstance(value._values, ABCDatetimeIndex):
@@ -964,6 +961,13 @@ def maybe_cast_to_datetime(value, dtype, errors='raise'):
         is_datetime64 = is_datetime64_dtype(dtype)
         is_datetime64tz = is_datetime64tz_dtype(dtype)
         is_timedelta64 = is_timedelta64_dtype(dtype)
+
+        if isinstance(value, (ABCDatetimeIndex, ABCDatetimeArray,)):
+            # TODO: check if we're supposed to handle timedelta
+            if value.dtype == dtype:
+                return value
+            else:
+                raise TypeError("?")
 
         if is_datetime64 or is_datetime64tz or is_timedelta64:
 

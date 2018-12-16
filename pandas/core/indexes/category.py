@@ -338,9 +338,9 @@ class CategoricalIndex(Index, accessor.PandasDelegate):
         name = get_op_result_name(self, other)
         return self._shallow_copy(result, name=name)
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """ return the underlying data as an ndarray """
-        return self._data.get_values()
+        return self._data.get_values(dtype=dtype)
 
     def tolist(self):
         return self._data.tolist()

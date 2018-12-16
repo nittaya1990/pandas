@@ -554,7 +554,7 @@ def sanitize_array(data, index, dtype=None, copy=False,
     # GH#846
     if isinstance(data, (np.ndarray, Index, ABCSeries)):
 
-        if dtype is not None:
+        if dtype is not None and not is_extension_array_dtype(dtype):
             subarr = np.array(data, copy=False)
 
             # possibility of nan -> garbage

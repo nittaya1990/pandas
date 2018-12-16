@@ -1494,7 +1494,7 @@ class Categorical(ExtensionArray, PandasObject):
 
         return Series(count, index=CategoricalIndex(ix), dtype='int64')
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """
         Return the values.
 
@@ -1508,8 +1508,12 @@ class Categorical(ExtensionArray, PandasObject):
         """
         # if we are a datetime and period index, return Index to keep metadata
         if is_datetimelike(self.categories):
-            return self.categories.take(self._codes, fill_value=np.nan)
-        return np.array(self)
+            values = self.categories.take(self._codes, fill_value=np.nan)
+            if dtype is not None:
+                values = values.astype(dtype)
+            return values
+        else:
+            return np.asarray(self, dtype=dtype)
 
     def check_for_ordered(self, op):
         """ assert that we are ordered """
@@ -1712,7 +1716,7 @@ class Categorical(ExtensionArray, PandasObject):
         """
         return self
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         """
         Return my 'dense' representation
 
@@ -1722,7 +1726,7 @@ class Categorical(ExtensionArray, PandasObject):
         -------
         dense : array
         """
-        return np.asarray(self)
+        return np.asarray(self, dtype=dtype)
 
     @deprecate_kwarg(old_arg_name='fill_value', new_arg_name='value')
     def fillna(self, value=None, method=None, limit=None):

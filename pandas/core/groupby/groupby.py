@@ -27,6 +27,7 @@ from pandas.util._validators import validate_kwargs
 from pandas.core.dtypes.cast import maybe_downcast_to_dtype
 from pandas.core.dtypes.common import (
     ensure_float, is_extension_array_dtype, is_numeric_dtype, is_scalar)
+from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
 from pandas.core.dtypes.missing import isna, notna
 
 import pandas.core.algorithms as algorithms
@@ -1270,6 +1271,9 @@ class GroupBy(_GroupBy):
         def first_compat(x, axis=0):
 
             def first(x):
+                if isinstance(x, (ABCIndexClass, ABCSeries)):
+                    # avoid FutureWarning for DatetimeArray
+                    x = x.array
 
                 x = np.asarray(x)
                 x = x[notna(x)]
@@ -1285,6 +1289,9 @@ class GroupBy(_GroupBy):
         def last_compat(x, axis=0):
 
             def last(x):
+                if isinstance(x, (ABCIndexClass, ABCSeries)):
+                    # avoid FutureWarning for DatetimeArray
+                    x = x.array
 
                 x = np.asarray(x)
                 x = x[notna(x)]

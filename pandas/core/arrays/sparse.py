@@ -1366,7 +1366,7 @@ class SparseArray(PandasObject, ExtensionArray, ExtensionOpsMixin):
         return type(self)(sp_values, sparse_index=self.sp_index,
                           fill_value=fill_value)
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         """
         Convert SparseArray to a NumPy array.
 
@@ -1374,7 +1374,8 @@ class SparseArray(PandasObject, ExtensionArray, ExtensionOpsMixin):
         -------
         arr : NumPy array
         """
-        return np.asarray(self, dtype=self.sp_values.dtype)
+        dtype = dtype or self.sp_values.dtype
+        return np.asarray(self, dtype=dtype)
 
     # TODO: Look into deprecating this in favor of `to_dense`.
     get_values = to_dense

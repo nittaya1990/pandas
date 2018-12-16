@@ -434,7 +434,7 @@ class SparseSeries(Series):
                              kind=self.kind)
         self._data = SingleBlockManager(values, self.index)
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         """
         Convert SparseSeries to a Series.
 
@@ -442,7 +442,7 @@ class SparseSeries(Series):
         -------
         s : Series
         """
-        return Series(self.values.to_dense(), index=self.index,
+        return Series(self.values.to_dense(dtype=dtype), index=self.index,
                       name=self.name)
 
     @property
