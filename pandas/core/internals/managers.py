@@ -1547,9 +1547,9 @@ class SingleBlockManager(BlockManager):
         """Return the internal values used by the DataFrame/SeriesFormatter"""
         return self._block.formatting_values()
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """ return a dense type view """
-        return np.array(self._block.to_dense(), copy=False)
+        return np.array(self._block.to_dense(dtype=dtype), copy=False)
 
     @property
     def asobject(self):

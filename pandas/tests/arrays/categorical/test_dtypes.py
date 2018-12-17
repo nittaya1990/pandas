@@ -6,7 +6,9 @@ from pandas.compat import long
 
 from pandas.core.dtypes.dtypes import CategoricalDtype
 
-from pandas import Categorical, CategoricalIndex, Index, Series, Timestamp
+from pandas import (
+    Categorical, CategoricalIndex, DatetimeIndex, Index, PeriodIndex, Series,
+    TimedeltaIndex, Timestamp)
 import pandas.util.testing as tm
 
 
@@ -110,6 +112,50 @@ class TestCategoricalDtypes(object):
         # removing cats
         result = result.remove_categories(['foo%05d' % i for i in range(300)])
         assert result.codes.dtype == 'int8'
+
+    @pytest.mark.parametrize("data, expected", [
+        # regular ndarray
+        (np.array([1, 2], dtype="int64"), np.array([1, 2], dtype="int64")),
+
+        # period -> PeriodIndex
+        (PeriodIndex(['2000', '2001'], freq='D'),
+         PeriodIndex(['2000', '2001'], freq='D')),
+
+        # timedelta -> TimedeltaIndex
+        (TimedeltaIndex(['1s', '2s']),
+         TimedeltaIndex(['1s', '2s'])),
+
+        # datetimelike -> DatetimeIndex
+        (np.array([1, 2], dtype="datetime64[ns]"),
+         DatetimeIndex(np.array([1, 2], dtype="datetime64[ns]"))),
+
+        # datetimelike -> DatetimeIndex with tz
+        (DatetimeIndex(['2000', 'NaT'], tz="US/Central"),
+         DatetimeIndex(['2000', 'NaT'], tz="US/Central")),
+    ])
+    def test_get_values(self, data, expected):
+        cat = Categorical(data)
+        result = cat.get_values()
+        tm.assert_equal(result, expected)
+
+    def test_get_values_with_dtype(self):
+        result = Categorical([1, 2, 3]).get_values(dtype="float64")
+        expected = np.array([1.0, 2.0, 3.0], dtype="float64")
+        tm.assert_numpy_array_equal(result, expected)
+
+    def test_get_values_with_datelike(self):
+        cat = Categorical(np.array([1, 2], dtype="M8[ns]"))
+        result = cat.get_values(dtype=object)
+        expected = Index([Timestamp(1), Timestamp(2)], dtype=object)
+        tm.assert_index_equal(result, expected)
+
+    def test_get_values_with_datelike_tz(self):
+        tz = "US/Central"
+        cat = Categorical(DatetimeIndex(['2000', '2001'], tz=tz))
+        result = cat.get_values(dtype=object)
+        expected = Index([Timestamp('2000', tz=tz), Timestamp('2001', tz=tz)],
+                         dtype=object)
+        tm.assert_index_equal(result, expected)
 
     @pytest.mark.parametrize('ordered', [True, False])
     def test_astype(self, ordered):

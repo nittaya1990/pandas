@@ -326,7 +326,7 @@ class SparseDataFrame(DataFrame):
         self._default_fill_value = fv
         self._default_kind = kind
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         """
         Convert to dense DataFrame
 
@@ -334,7 +334,7 @@ class SparseDataFrame(DataFrame):
         -------
         df : DataFrame
         """
-        data = {k: v.to_dense() for k, v in compat.iteritems(self)}
+        data = {k: v.to_dense(dtype=dtype) for k, v in compat.iteritems(self)}
         return DataFrame(data, index=self.index, columns=self.columns)
 
     def _apply_columns(self, func):

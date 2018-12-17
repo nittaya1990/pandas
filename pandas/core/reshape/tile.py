@@ -226,6 +226,13 @@ def cut(x, bins, right=True, labels=None, retbins=False, precision=3,
             raise ValueError('Overlapping IntervalIndex is not accepted.')
 
     else:
+        # TODO(Series[datetime64[ns, tz]].__iter__): remove this block
+        if is_datetime64tz_dtype(dtype):
+            # avoid future warning
+            bins = np.asarray(bins, dtype="M8[ns]")
+        else:
+            bins = np.asarray(bins)
+
         bins = np.asarray(bins)
         bins = _convert_bin_to_numeric_type(bins, dtype)
         if (np.diff(bins) < 0).any():

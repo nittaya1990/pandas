@@ -16,7 +16,7 @@ from pandas.util._decorators import Appender
 from pandas.core.dtypes.common import (
     _INT64_DTYPE, _NS_DTYPE, is_categorical_dtype, is_datetime64_dtype,
     is_datetime64_ns_dtype, is_datetime64tz_dtype, is_dtype_equal,
-    is_extension_type, is_float_dtype, is_int64_dtype, is_object_dtype,
+    is_extension_type, is_float_dtype, is_integer_dtype, is_object_dtype,
     is_period_dtype, is_string_dtype, is_timedelta64_dtype, pandas_dtype)
 from pandas.core.dtypes.dtypes import DatetimeTZDtype
 from pandas.core.dtypes.generic import ABCIndexClass, ABCSeries
@@ -524,12 +524,15 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
     # Array-Like / EA-Interface Methods
 
     def __array__(self, dtype=None):
-        if is_object_dtype(dtype):
+        if is_object_dtype(dtype) or dtype is None:
             return np.array(list(self), dtype=object)
-        elif is_int64_dtype(dtype):
-            return self.asi8
-
-        return self._data
+        elif is_integer_dtype(dtype):
+            # strangely it seems like np.asarray(datetime64[ns], int) isn't
+            # zero-copy?
+            # TODO: int64
+            return self._data.view(dtype)
+        else:
+            return np.asarray(self._data, dtype=dtype)
 
     def __iter__(self):
         """

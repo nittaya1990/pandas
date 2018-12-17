@@ -399,8 +399,19 @@ def array_equivalent(left, right, strict_nan=False):
     ...     np.array([1, 2, np.nan]))
     False
     """
+    if (isinstance(left, (ABCSeries, ABCIndexClass))
+            and is_datetime64tz_dtype(left.dtype)):
+        # TODO: This is preserving the previous behavior, but I think
+        # it's possibly wrong for datetime-tz data.
+        left = np.asarray(left, dtype='M8[ns]')
+    else:
+        left = np.asarray(left)
 
-    left, right = np.asarray(left), np.asarray(right)
+    if (isinstance(right, (ABCSeries, ABCIndexClass))
+            and is_datetime64tz_dtype(right.dtype)):
+        right = np.asarray(right, dtype='M8[ns]')
+    else:
+        right = np.asarray(right)
 
     # shape compat
     if left.shape != right.shape:

@@ -21,7 +21,7 @@ from pandas.core.dtypes.common import (
     is_extension_array_dtype, is_extension_type, is_hashable, is_integer,
     is_iterator, is_list_like, is_scalar, is_string_like, is_timedelta64_dtype)
 from pandas.core.dtypes.generic import (
-    ABCDataFrame, ABCDatetimeIndex, ABCSeries, ABCSparseArray, ABCSparseSeries)
+    ABCDataFrame, ABCDatetimeArray, ABCSeries, ABCSparseArray, ABCSparseSeries)
 from pandas.core.dtypes.missing import (
     isna, na_value_for_dtype, notna, remove_na_arraylike)
 
@@ -179,15 +179,11 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
 
                 if dtype is not None:
                     # astype copies
-                    data = data.astype(dtype)
+                    data = data.array.astype(dtype)
                 else:
                     # need to copy to avoid aliasing issues
-                    data = data._values.copy()
-                    if (isinstance(data, ABCDatetimeIndex) and
-                            data.tz is not None):
-                        # GH#24096 need copy to be deep for datetime64tz case
-                        # TODO: See if we can avoid these copies
-                        data = data._values.copy(deep=True)
+                    data = data.array.copy()
+
                 copy = False
 
             elif isinstance(data, np.ndarray):
@@ -484,11 +480,11 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
         """
         return self._data.formatting_values()
 
-    def get_values(self):
+    def get_values(self, dtype=None):
         """
         Same as values (but handles sparseness conversions); is a view.
         """
-        return self._data.get_values()
+        return self._data.get_values(dtype=dtype)
 
     @property
     def asobject(self):
@@ -656,11 +652,23 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
     # ----------------------------------------------------------------------
     # NDArray Compat
 
-    def __array__(self, result=None):
+    def __array__(self, dtype=None):
         """
         The array interface, return my values.
         """
-        return self.get_values()
+        if (dtype is None and isinstance(self.array, ABCDatetimeArray)
+                and getattr(self.dtype, 'tz', None)):
+            msg = (
+                "Converting timezone-aware DatetimeArray to timezone-naive "
+                "ndarray with 'datetime64[ns]' dtype. In the future, this "
+                "will return an ndarray with 'object' dtype where each "
+                "element is a 'pandas.Timestamp' with the correct 'tz'.\n\t"
+                "To accept the future behavior, pass 'dtype=object'.\n\t"
+                "To keep the old behavior, pass 'dtype=\"datetime64[ns]\"'."
+            )
+            warnings.warn(msg, FutureWarning, stacklevel=3)
+            dtype = 'M8[ns]'
+        return self.get_values(dtype=dtype)
 
     def __array_wrap__(self, result, context=None):
         """

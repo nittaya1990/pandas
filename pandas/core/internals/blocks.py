@@ -181,8 +181,8 @@ class Block(PandasObject):
             return self.values.astype(object)
         return self.values
 
-    def to_dense(self):
-        return self.values.view()
+    def to_dense(self, dtype=None):
+        return np.asarray(self.values, dtype=dtype)
 
     @property
     def _na_value(self):
@@ -1872,8 +1872,8 @@ class ExtensionBlock(NonConsolidatableMixIn, Block):
             values = values.reshape((1,) + values.shape)
         return values
 
-    def to_dense(self):
-        return np.asarray(self.values)
+    def to_dense(self, dtype=None):
+        return np.asarray(self.values, dtype=dtype)
 
     def take_nd(self, indexer, axis=0, new_mgr_locs=None, fill_tuple=None):
         """
@@ -2181,9 +2181,9 @@ class DatetimeLikeBlockMixin(object):
     def fill_value(self):
         return tslibs.iNaT
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         # TODO(DatetimeBlock): remove
-        return np.asarray(self.values)
+        return np.asarray(self.values, dtype=dtype)
 
     def get_values(self, dtype=None):
         """
@@ -2704,11 +2704,11 @@ class CategoricalBlock(ExtensionBlock):
 
         return result
 
-    def to_dense(self):
+    def to_dense(self, dtype=None):
         # Categorical.get_values returns a DatetimeIndex for datetime
         # categories, so we can't simply use `np.asarray(self.values)` like
         # other types.
-        return self.values.get_values()
+        return self.values.get_values(dtype=dtype)
 
     def to_native_types(self, slicer=None, na_rep='', quoting=None, **kwargs):
         """ convert to our native types format, slicing if desired """
@@ -2995,6 +2995,10 @@ class DatetimeTZBlock(ExtensionBlock, DatetimeBlock):
         if deep:
             values = values.copy(deep=True)
         return self.make_block_same_class(values)
+
+    def to_dense(self, dtype=None):
+        # TODO: maybe remove
+        return np.asarray(self.values, dtype=dtype)
 
     def get_values(self, dtype=None):
         """
