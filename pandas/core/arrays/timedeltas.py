@@ -190,6 +190,28 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin, dtl.TimelikeOps):
         self._data = values
         self._dtype = dtype
         self._freq = freq
+        if freq:
+            self._validate_frequency(values, freq, inferred=None)
+
+    @classmethod
+    def _generate_regular_range(cls, start, end, periods, offset):
+        stride = offset.nanos
+        if periods is None:
+            b = Timedelta(start).value
+            e = Timedelta(end).value
+            e += stride - e % stride
+        elif start is not None:
+            b = Timedelta(start).value
+            e = b + periods * stride
+        elif end is not None:
+            e = Timedelta(end).value + stride
+            b = e - periods * stride
+        else:
+            raise ValueError("at least 'start' or 'end' should be specified "
+                             "if a 'period' is given.")
+
+        data = np.arange(b, e, stride, dtype=np.int64)
+        return data
 
     @classmethod
     def _simple_new(cls, values, freq=None, dtype=_TD_DTYPE):
@@ -220,7 +242,6 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin, dtl.TimelikeOps):
 
     @classmethod
     def _generate_range(cls, start, end, periods, freq, closed=None):
-
         periods = dtl.validate_periods(periods)
         if freq is None and any(x is None for x in [periods, start, end]):
             raise ValueError('Must provide freq argument if no data is '
@@ -244,7 +265,7 @@ class TimedeltaArrayMixin(dtl.DatetimeLikeArrayMixin, dtl.TimelikeOps):
         left_closed, right_closed = dtl.validate_endpoints(closed)
 
         if freq is not None:
-            index = _generate_regular_range(start, end, periods, freq)
+            index = cls._generate_regular_range(start, end, periods, freq)
         else:
             index = np.linspace(start.value, end.value, periods).astype('i8')
 
@@ -988,26 +1009,6 @@ def objects_to_td64ns(data, unit="ns", errors="raise"):
     result = array_to_timedelta64(values,
                                   unit=unit, errors=errors)
     return result.view('timedelta64[ns]')
-
-
-def _generate_regular_range(start, end, periods, offset):
-    stride = offset.nanos
-    if periods is None:
-        b = Timedelta(start).value
-        e = Timedelta(end).value
-        e += stride - e % stride
-    elif start is not None:
-        b = Timedelta(start).value
-        e = b + periods * stride
-    elif end is not None:
-        e = Timedelta(end).value + stride
-        b = e - periods * stride
-    else:
-        raise ValueError("at least 'start' or 'end' should be specified "
-                         "if a 'period' is given.")
-
-    data = np.arange(b, e, stride, dtype=np.int64)
-    return data
 
 
 def extract_values_freq(arr, freq):

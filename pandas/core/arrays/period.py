@@ -239,6 +239,11 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
 
         return subarr, freq
 
+    @classmethod
+    def _validate_frequency(cls, points, freq):
+        # freq validation is not necessary.
+        pass
+
     def _unbox_scalar(self, value):
         # type: (Union[Period, NaTType]) -> int
         if value is NaT:
