@@ -1,6 +1,9 @@
 import operator
+import warnings
 
 import pytest
+
+from pandas.errors import ExtensionArrayCastingWarning
 
 
 @pytest.fixture
@@ -108,3 +111,11 @@ def data_for_grouping():
 def box_in_series(request):
     """Whether to box the data in a Series"""
     return request.param
+
+
+@pytest.fixture
+def ignore_casting_warning():
+    """Fixture for ignoring ExtensionArrayCastingWarning."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ExtensionArrayCastingWarning)
+        yield

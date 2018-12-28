@@ -6,12 +6,13 @@
    without warning.
 """
 import operator
+import warnings
 
 import numpy as np
 
 from pandas.compat import PY3, set_function_name
 from pandas.compat.numpy import function as nv
-from pandas.errors import AbstractMethodError
+from pandas.errors import AbstractMethodError, ExtensionArrayCastingWarning
 from pandas.util._decorators import Appender, Substitution
 
 from pandas.core.dtypes.common import is_list_like
@@ -23,6 +24,11 @@ from pandas.core import ops
 _not_implemented_message = "{} does not implement {}."
 
 _extension_array_shared_docs = dict()
+
+
+# By default, this is hidden from users. Pandas base tests will
+# un-hide it.
+warnings.simplefilter("ignore", ExtensionArrayCastingWarning)
 
 
 class ExtensionArray(object):
@@ -69,6 +75,10 @@ class ExtensionArray(object):
     * factorize / _values_for_factorize
     * argsort / _values_for_argsort
     * searchsorted
+
+    This methods emit an ExtensionArrayCastingWarning, which is filtered
+    by default, but is not filtered when running the base extension array
+    tests provided by pandas.
 
     The remaining methods implemented on this class should be performant,
     as they only compose abstract methods. Still, a more efficient
@@ -430,6 +440,8 @@ class ExtensionArray(object):
         if mask.any():
             if method is not None:
                 func = pad_1d if method == 'pad' else backfill_1d
+                warnings.warn(ExtensionArrayCastingWarning._message,
+                              ExtensionArrayCastingWarning)
                 new_values = func(self.astype(object), limit=limit,
                                   mask=mask)
                 new_values = self._from_sequence(new_values, dtype=self.dtype)
@@ -516,6 +528,8 @@ class ExtensionArray(object):
         """
         from pandas import unique
 
+        warnings.warn(ExtensionArrayCastingWarning._message,
+                      ExtensionArrayCastingWarning)
         uniques = unique(self.astype(object))
         return self._from_sequence(uniques, dtype=self.dtype)
 
@@ -590,6 +604,8 @@ class ExtensionArray(object):
         The values returned by this method are also used in
         :func:`pandas.util.hash_pandas_object`.
         """
+        warnings.warn(ExtensionArrayCastingWarning._message,
+                      ExtensionArrayCastingWarning)
         return self.astype(object), np.nan
 
     def factorize(self, na_sentinel=-1):

@@ -181,3 +181,14 @@ class AbstractMethodError(NotImplementedError):
             name = self.class_instance.__class__.__name__
         msg = "This {methodtype} must be defined in the concrete class {name}"
         return (msg.format(methodtype=self.methodtype, name=name))
+
+
+class ExtensionArrayCastingWarning(Warning):
+    """
+    Warning when an extension array method implicitly converts to object.
+
+    This warning is filtered from pandas users by default. It's
+    intended to inform ExtensionArray authors when an inherited
+    ExtensionArray method implicitly converts to an object dtype ndarray.
+    """
+    _message = "Implicitly converting to object dtype."

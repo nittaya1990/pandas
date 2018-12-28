@@ -159,6 +159,9 @@ class TestGetitem(BaseJSON, base.BaseGetitemTests):
     pass
 
 
+@pytest.mark.filterwarnings(
+    "ignore::pandas.errors.ExtensionArrayCastingWarning"
+)
 class TestMissing(BaseJSON, base.BaseMissingTests):
     @pytest.mark.skip(reason="Setting a dict as a scalar")
     def test_fillna_series(self):

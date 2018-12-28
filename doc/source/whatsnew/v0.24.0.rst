@@ -1054,6 +1054,7 @@ update the ``ExtensionDtype._metadata`` tuple to match the signature of your
 - Bug when grouping :meth:`Dataframe.groupby()` and aggregating on ``ExtensionArray`` it was not returning the actual ``ExtensionArray`` dtype (:issue:`23227`).
 - Bug in :func:`pandas.merge` when merging on an extension array-backed column (:issue:`23020`).
 - A default repr for :class:`pandas.api.extensions.ExtensionArray` is now provided (:issue:`23601`).
+- A warning, ``ExtensionArrayCastingWarning``, is now emitted from base ``ExtensionArray`` methods that involve converting to object dtype. This warning is ignored by default, but elevated to ``'always'`` as part of pandas' base tests (:issue:``).
 
 .. _whatsnew_0240.api.incompatibilities:
 

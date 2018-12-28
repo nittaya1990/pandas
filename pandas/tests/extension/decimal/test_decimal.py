@@ -145,6 +145,9 @@ class TestGetitem(BaseDecimal, base.BaseGetitemTests):
         self.assert_extension_array_equal(result, expected)
 
 
+@pytest.mark.filterwarnings(
+    "ignore::pandas.errors.ExtensionArrayCastingWarning"
+)
 class TestMissing(BaseDecimal, base.BaseMissingTests):
     pass
 
@@ -171,6 +174,9 @@ class TestBooleanReduce(Reduce, base.BaseBooleanReduceTests):
     pass
 
 
+@pytest.mark.filterwarnings(
+    "ignore::pandas.errors.ExtensionArrayCastingWarning"
+)
 class TestMethods(BaseDecimal, base.BaseMethodsTests):
     @pytest.mark.parametrize('dropna', [True, False])
     @pytest.mark.xfail(reason="value_counts not implemented yet.")

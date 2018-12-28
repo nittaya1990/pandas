@@ -18,6 +18,7 @@ import pytest
 
 from pandas.core.dtypes.dtypes import IntervalDtype
 
+import pandas as pd
 from pandas import Interval
 from pandas.core.arrays import IntervalArray
 from pandas.tests.extension import base
@@ -91,7 +92,37 @@ class TestGetitem(BaseInterval, base.BaseGetitemTests):
 
 
 class TestGrouping(BaseInterval, base.BaseGroupbyTests):
-    pass
+
+    @pytest.mark.parametrize('as_index', [True, False])
+    def test_groupby_extension_agg(self, as_index, data_for_grouping,
+                                   ignore_casting_warning):
+        return super(TestGrouping, self).test_groupby_extension_agg(
+            as_index, data_for_grouping
+        )
+
+    @pytest.mark.parametrize('op', [
+        lambda x: 1,
+        lambda x: [1] * len(x),
+        lambda x: pd.Series([1] * len(x)),
+        lambda x: x,
+    ], ids=['scalar', 'list', 'series', 'object'])
+    def test_groupby_extension_apply(self, data_for_grouping, op,
+                                     ignore_casting_warning):
+        return super(TestGrouping, self).test_groupby_extension_apply(
+            data_for_grouping, op
+        )
+
+    def test_groupby_extension_no_sort(self, data_for_grouping,
+                                       ignore_casting_warning):
+        super(TestGrouping, self).test_groupby_extension_no_sort(
+            data_for_grouping
+        )
+
+    def test_groupby_extension_transform(self, data_for_grouping,
+                                         ignore_casting_warning):
+        super(TestGrouping, self).test_groupby_extension_transform(
+            data_for_grouping
+        )
 
 
 class TestInterface(BaseInterval, base.BaseInterfaceTests):
@@ -111,6 +142,40 @@ class TestMethods(BaseInterval, base.BaseMethodsTests):
     @pytest.mark.skip(reason="Not Applicable")
     def test_fillna_length_mismatch(self, data_missing):
         pass
+
+    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    def test_factorize(self, data_for_grouping, na_sentinel,
+                       ignore_casting_warning):
+        return super(TestMethods, self).test_factorize(
+            data_for_grouping, na_sentinel
+        )
+
+    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    def test_factorize_equivalence(self, data_for_grouping, na_sentinel,
+                                   ignore_casting_warning):
+        return super(TestMethods, self).test_factorize_equivalence(
+            data_for_grouping, na_sentinel
+        )
+
+    @pytest.mark.parametrize('ascending', [True, False])
+    def test_sort_values(self, data_for_sorting, ascending,
+                         ignore_casting_warning):
+        return super(TestMethods, self).test_sort_values(
+            data_for_sorting, ascending
+        )
+
+    @pytest.mark.parametrize('ascending', [True, False])
+    def test_sort_values_frame(self, data_for_sorting, ascending,
+                               ignore_casting_warning):
+        return super(TestMethods, self).test_sort_values_frame(
+            data_for_sorting, ascending
+        )
+
+    @pytest.mark.parametrize('box', [pd.Series, lambda x: x])
+    @pytest.mark.parametrize('method', [lambda x: x.unique(), pd.unique])
+    def test_unique(self, data, box, method,
+                    ignore_casting_warning):
+        return super(TestMethods, self).test_unique(data, box, method)
 
 
 class TestMissing(BaseInterval, base.BaseMissingTests):
@@ -141,7 +206,15 @@ class TestMissing(BaseInterval, base.BaseMissingTests):
 
 
 class TestReshaping(BaseInterval, base.BaseReshapingTests):
-    pass
+
+    def test_merge_on_extension_array(self, data, ignore_casting_warning):
+        super(TestReshaping, self).test_merge_on_extension_array(data)
+
+    def test_merge_on_extension_array_duplicates(self, data,
+                                                 ignore_casting_warning):
+        super(TestReshaping, self).test_merge_on_extension_array_duplicates(
+            data
+        )
 
 
 class TestSetitem(BaseInterval, base.BaseSetitemTests):

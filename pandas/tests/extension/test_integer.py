@@ -163,11 +163,18 @@ class TestConstructors(base.BaseConstructorsTests):
 
 
 class TestReshaping(base.BaseReshapingTests):
-    pass
-
     # for test_concat_mixed_dtypes test
     # concat of an Integer and Int coerces to object dtype
     # TODO(jreback) once integrated this would
+
+    def test_merge_on_extension_array(self, data, ignore_casting_warning):
+        super(TestReshaping, self).test_merge_on_extension_array(data)
+
+    def test_merge_on_extension_array_duplicates(self, data,
+                                                 ignore_casting_warning):
+        super(TestReshaping, self).test_merge_on_extension_array_duplicates(
+            data
+        )
 
 
 class TestGetitem(base.BaseGetitemTests):
@@ -179,7 +186,19 @@ class TestSetitem(base.BaseSetitemTests):
 
 
 class TestMissing(base.BaseMissingTests):
-    pass
+
+    def test_fillna_limit_pad(self, data_missing, ignore_casting_warning):
+        super(TestMissing, self).test_fillna_limit_pad(data_missing)
+
+    @pytest.mark.parametrize('method', ['ffill', 'bfill'])
+    def test_fillna_series_method(self, data_missing, method,
+                                  ignore_casting_warning):
+        super(TestMissing, self).test_fillna_series_method(data_missing,
+                                                           method)
+
+    def test_fillna_limit_backfill(self, data_missing,
+                                   ignore_casting_warning):
+        super(TestMissing, self).test_fillna_limit_backfill(data_missing)
 
 
 class TestMethods(base.BaseMethodsTests):
@@ -199,11 +218,44 @@ class TestMethods(base.BaseMethodsTests):
 
         self.assert_series_equal(result, expected)
 
+    @pytest.mark.parametrize('ascending', [True, False])
+    def test_sort_values_frame(self, data_for_sorting, ascending,
+                               ignore_casting_warning):
+        super(TestMethods, self).test_sort_values_frame(data_for_sorting,
+                                                        ascending)
+
+    @pytest.mark.parametrize('box', [pd.Series, lambda x: x])
+    @pytest.mark.parametrize('method', [lambda x: x.unique(), pd.unique])
+    def test_unique(self, data, box, method, ignore_casting_warning):
+        return super(TestMethods, self).test_unique(data, box, method)
+
+    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    def test_factorize(self, data_for_grouping, na_sentinel,
+                       ignore_casting_warning):
+        return super(TestMethods, self).test_factorize(data_for_grouping,
+                                                       na_sentinel)
+
+    @pytest.mark.parametrize("as_frame", [True, False])
+    def test_hash_pandas_object_works(self, data, as_frame,
+                                      ignore_casting_warning):
+        return super(TestMethods, self).test_hash_pandas_object_works(data,
+                                                                      as_frame)
+
+    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    def test_factorize_equivalence(self, data_for_grouping, na_sentinel,
+                                   ignore_casting_warning):
+        return super(TestMethods, self).test_factorize_equivalence(
+            data_for_grouping, na_sentinel
+        )
+
 
 class TestCasting(base.BaseCastingTests):
     pass
 
 
+@pytest.mark.filterwarnings(
+    "ignore::pandas.errors.ExtensionArrayCastingWarning"
+)
 class TestGroupby(base.BaseGroupbyTests):
     pass
 

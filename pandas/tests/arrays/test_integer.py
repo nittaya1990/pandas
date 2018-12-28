@@ -692,6 +692,15 @@ def test_astype_nansafe():
         arr.astype('uint32')
 
 
+def test_unique_no_warning():
+    arr = integer_array([np.nan, 1, 2], dtype="Int8")
+
+    # ExtensionArrayCastingWarning should be hidden by default.
+    # I would like to use pytest.warns here, but code_checks prevents that.
+    # So we rely on the numpydev build failing if a warning is emitted.
+    arr.unique()
+
+
 # TODO(jreback) - these need testing / are broken
 
 # shift
