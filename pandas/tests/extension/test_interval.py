@@ -93,19 +93,13 @@ class TestGetitem(BaseInterval, base.BaseGetitemTests):
 
 class TestGrouping(BaseInterval, base.BaseGroupbyTests):
 
-    @pytest.mark.parametrize('as_index', [True, False])
-    def test_groupby_extension_agg(self, as_index, data_for_grouping,
+    def test_groupby_extension_agg(self, box_in_index, data_for_grouping,
                                    ignore_casting_warning):
         return super(TestGrouping, self).test_groupby_extension_agg(
-            as_index, data_for_grouping
+            box_in_index, data_for_grouping
         )
 
-    @pytest.mark.parametrize('op', [
-        lambda x: 1,
-        lambda x: [1] * len(x),
-        lambda x: pd.Series([1] * len(x)),
-        lambda x: x,
-    ], ids=['scalar', 'list', 'series', 'object'])
+    @base.BaseGroupbyTests.fixture_groupby_extension_apply
     def test_groupby_extension_apply(self, data_for_grouping, op,
                                      ignore_casting_warning):
         return super(TestGrouping, self).test_groupby_extension_apply(
@@ -150,7 +144,7 @@ class TestMethods(BaseInterval, base.BaseMethodsTests):
             data_for_grouping, na_sentinel
         )
 
-    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    @base.BaseMethodsTests.fixture_factoraize_na_sentinel
     def test_factorize_equivalence(self, data_for_grouping, na_sentinel,
                                    ignore_casting_warning):
         return super(TestMethods, self).test_factorize_equivalence(

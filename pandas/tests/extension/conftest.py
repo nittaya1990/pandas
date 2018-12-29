@@ -109,7 +109,13 @@ def data_for_grouping():
 
 @pytest.fixture(params=[True, False])
 def box_in_series(request):
-    """Whether to box the data in a Series"""
+    """Whether to box the data in a Series."""
+    return request.param
+
+
+@pytest.fixture(params=[True, False])
+def box_in_index(request):
+    """Whether to box the data in an Index."""
     return request.param
 
 

@@ -85,7 +85,10 @@ class BaseMethodsTests(BaseExtensionTests):
         assert isinstance(result, type(data))
         assert result[0] == duplicated[0]
 
-    @pytest.mark.parametrize('na_sentinel', [-1, -2])
+    fixture_factoraize_na_sentinel = pytest.mark.parametrize('na_sentinel',
+                                                             [-1, -2])
+
+    @fixture_factoraize_na_sentinel
     def test_factorize(self, data_for_grouping, na_sentinel):
         labels, uniques = pd.factorize(data_for_grouping,
                                        na_sentinel=na_sentinel)
