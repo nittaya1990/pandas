@@ -9,6 +9,22 @@ import pandas.util.testing as tm
 
 
 class TestTimedeltaArrayConstructor(object):
+    def test_other_type_raises(self):
+        with pytest.raises(TypeError,
+                           match="dtype bool cannot be converted"):
+            TimedeltaArray(np.array([1, 2, 3], dtype='bool'))
+
+    def test_incorrect_dtype_raises(self):
+        # TODO: why TypeError for 'category' but ValueError for i8?
+        with pytest.raises(TypeError,
+                           match='data type "category" not understood'):
+            TimedeltaArray(np.array([1, 2, 3], dtype='i8'), dtype='category')
+
+        with pytest.raises(ValueError,
+                           match=r"Only timedelta64\[ns\] dtype is valid"):
+            TimedeltaArray(np.array([1, 2, 3], dtype='i8'),
+                           dtype=np.dtype(int))
+
     def test_copy(self):
         data = np.array([1, 2, 3], dtype='m8[ns]')
         arr = TimedeltaArray(data, copy=False)
@@ -72,3 +88,8 @@ class TestTimedeltaArray(object):
 
         assert result.dtype == expected_dtype
         tm.assert_numpy_array_equal(result, expected)
+
+    def test_setitem_clears_freq(self):
+        a = TimedeltaArray(pd.timedelta_range('1H', periods=2, freq='H'))
+        a[0] = pd.Timedelta("1H")
+        assert a.freq is None
