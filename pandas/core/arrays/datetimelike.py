@@ -15,7 +15,8 @@ import pandas.compat as compat
 from pandas.compat.numpy import function as nv
 from pandas.errors import (
     AbstractMethodError, NullFrequencyError, PerformanceWarning)
-from pandas.util._decorators import Appender, Substitution, deprecate_kwarg
+from pandas.util._decorators import Appender, Substitution
+from pandas.util._validators import validate_fillna_kwargs
 
 from pandas.core.dtypes.common import (
     is_bool_dtype, is_categorical_dtype, is_datetime64_any_dtype,
@@ -25,15 +26,18 @@ from pandas.core.dtypes.common import (
     is_string_dtype, is_timedelta64_dtype, is_unsigned_integer_dtype,
     needs_i8_conversion, pandas_dtype)
 from pandas.core.dtypes.generic import ABCDataFrame, ABCIndexClass, ABCSeries
+from pandas.core.dtypes.inference import is_array_like
 from pandas.core.dtypes.missing import isna
 
-from pandas.core.algorithms import checked_add_with_arr, take, unique1d
+from pandas.core import missing, nanops
+from pandas.core.algorithms import (
+    checked_add_with_arr, take, unique1d, value_counts)
 import pandas.core.common as com
 
 from pandas.tseries import frequencies
 from pandas.tseries.offsets import DateOffset, Tick
 
-from .base import ExtensionOpsMixin
+from .base import ExtensionArray, ExtensionOpsMixin
 
 
 def _make_comparison_op(cls, op):
@@ -43,7 +47,7 @@ def _make_comparison_op(cls, op):
         if isinstance(other, ABCDataFrame):
             return NotImplemented
 
-        if isinstance(other, (np.ndarray, ABCIndexClass, ABCSeries)):
+        if isinstance(other, (np.ndarray, ABCIndexClass, ABCSeries, cls)):
             if other.ndim > 0 and len(self) != len(other):
                 raise ValueError('Lengths must match to compare')
 
@@ -342,7 +346,9 @@ class TimelikeOps(object):
         return self._round(freq, RoundTo.PLUS_INFTY, ambiguous, nonexistent)
 
 
-class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
+class DatetimeLikeArrayMixin(ExtensionOpsMixin,
+                             AttributesMixin,
+                             ExtensionArray):
     """
     Shared Base/Mixin class for DatetimeArray, TimedeltaArray, PeriodArray
 
@@ -698,7 +704,44 @@ class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
         """
         nv.validate_repeat(args, kwargs)
         values = self._data.repeat(repeats)
-        return type(self)(values, dtype=self.dtype)
+        return type(self)(values.view('i8'), dtype=self.dtype)
+
+    def value_counts(self, dropna=False):
+        """
+        Return a Series containing counts of unique values.
+
+        Parameters
+        ----------
+        dropna : boolean, default True
+            Don't include counts of NaT values.
+
+        Returns
+        -------
+        Series
+        """
+        from pandas import Series, Index
+
+        if dropna:
+            values = self[~self.isna()]._data
+        else:
+            values = self._data
+
+        cls = type(self)
+
+        result = value_counts(values, sort=False, dropna=dropna)
+        index = Index(cls(result.index.view('i8'), dtype=self.dtype),
+                      name=result.index.name)
+        return Series(result.values, index=index, name=result.name)
+
+    def map(self, mapper):
+        # TODO(GH-23179): Add ExtensionArray.map
+        # Need to figure out if we want ExtensionArray.map first.
+        # If so, then we can refactor IndexOpsMixin._map_values to
+        # a standalone function and call from here..
+        # Else, just rewrite _map_infer_values to do the right thing.
+        from pandas import Index
+
+        return Index(self).map(mapper).array
 
     # ------------------------------------------------------------------
     # Null Handling
@@ -745,6 +788,52 @@ class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
                 fill_value = np.nan
             result[self._isnan] = fill_value
         return result
+
+    def fillna(self, value=None, method=None, limit=None):
+        # TODO(GH-20300): remove this
+        # Just overriding to ensure that we avoid an astype(object).
+        # Either 20300 or a `_values_for_fillna` would avoid this duplication.
+        if isinstance(value, ABCSeries):
+            value = value.array
+
+        value, method = validate_fillna_kwargs(value, method)
+
+        mask = self.isna()
+
+        if is_array_like(value):
+            if len(value) != len(self):
+                raise ValueError("Length of 'value' does not match. Got ({}) "
+                                 " expected {}".format(len(value), len(self)))
+            value = value[mask]
+
+        if mask.any():
+            if method is not None:
+                if method == 'pad':
+                    func = missing.pad_1d
+                else:
+                    func = missing.backfill_1d
+
+                values = self._data
+                if not is_period_dtype(self):
+                    # For PeriodArray self._data is i8, which gets copied
+                    #  by `func`.  Otherwise we need to make a copy manually
+                    # to avoid modifying `self` in-place.
+                    values = values.copy()
+
+                new_values = func(values, limit=limit,
+                                  mask=mask)
+                if is_datetime64tz_dtype(self):
+                    # we need to pass int64 values to the constructor to avoid
+                    #  re-localizing incorrectly
+                    new_values = new_values.view("i8")
+                new_values = type(self)(new_values, dtype=self.dtype)
+            else:
+                # fill with value
+                new_values = self.copy()
+                new_values[mask] = value
+        else:
+            new_values = self.copy()
+        return new_values
 
     # ------------------------------------------------------------------
     # Frequency Properties/Methods
@@ -1073,42 +1162,10 @@ class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
         left = lib.values_from_object(self.astype('O'))
 
         res_values = op(left, np.array(other))
+        kwargs = {}
         if not is_period_dtype(self):
-            return type(self)(res_values, freq='infer')
-        return self._from_sequence(res_values)
-
-    @deprecate_kwarg(old_arg_name='n', new_arg_name='periods')
-    def shift(self, periods, freq=None):
-        """
-        Shift index by desired number of time frequency increments.
-
-        This method is for shifting the values of datetime-like indexes
-        by a specified time increment a given number of times.
-
-        Parameters
-        ----------
-        periods : int
-            Number of periods (or increments) to shift by,
-            can be positive or negative.
-
-            .. versionchanged:: 0.24.0
-
-        freq : pandas.DateOffset, pandas.Timedelta or string, optional
-            Frequency increment to shift by.
-            If None, the index is shifted by its own `freq` attribute.
-            Offset aliases are valid strings, e.g., 'D', 'W', 'M' etc.
-
-        Returns
-        -------
-        pandas.DatetimeIndex
-            Shifted index.
-
-        See Also
-        --------
-        Index.shift : Shift values of Index.
-        PeriodIndex.shift : Shift values of PeriodIndex.
-        """
-        return self._time_shift(periods=periods, freq=freq)
+            kwargs['freq'] = 'infer'
+        return self._from_sequence(res_values, **kwargs)
 
     def _time_shift(self, periods, freq=None):
         """
@@ -1130,8 +1187,6 @@ class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
                 freq = frequencies.to_offset(freq)
             offset = periods * freq
             result = self + offset
-            if hasattr(self, 'tz'):
-                result._tz = self.tz
             return result
 
         if periods == 0:
@@ -1380,6 +1435,70 @@ class DatetimeLikeArrayMixin(ExtensionOpsMixin, AttributesMixin):
                     self.tz, ambiguous=ambiguous, nonexistent=nonexistent
                 )
         return arg
+
+    # --------------------------------------------------------------
+    # Reductions
+
+    def _reduce(self, name, axis=0, skipna=True, **kwargs):
+        op = getattr(self, name, None)
+        if op:
+            return op(axis=axis, skipna=skipna, **kwargs)
+        else:
+            return super(DatetimeLikeArrayMixin, self)._reduce(
+                name, skipna, **kwargs
+            )
+
+    def min(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return the minimum value of the Array or minimum along
+        an axis.
+
+        See Also
+        --------
+        numpy.ndarray.min
+        Index.min : Return the minimum value in an Index.
+        Series.min : Return the minimum value in a Series.
+        """
+        nv.validate_min(args, kwargs)
+        nv.validate_minmax_axis(axis)
+
+        result = nanops.nanmin(self.asi8, skipna=skipna, mask=self.isna())
+        if isna(result):
+            # Period._from_ordinal does not handle np.nan gracefully
+            return NaT
+        return self._box_func(result)
+
+    def max(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return the maximum value of the Array or maximum along
+        an axis.
+
+        See Also
+        --------
+        numpy.ndarray.max
+        Index.max : Return the maximum value in an Index.
+        Series.max : Return the maximum value in a Series.
+        """
+        # TODO: skipna is broken with max.
+        # See https://github.com/pandas-dev/pandas/issues/24265
+        nv.validate_max(args, kwargs)
+        nv.validate_minmax_axis(axis)
+
+        mask = self.isna()
+        if skipna:
+            values = self[~mask].asi8
+        elif mask.any():
+            return NaT
+        else:
+            values = self.asi8
+
+        if not len(values):
+            # short-circut for empty max / min
+            return NaT
+
+        result = nanops.nanmax(values, skipna=skipna)
+        # Don't have to worry about NA `result`, since no NA went in.
+        return self._box_func(result)
 
 
 DatetimeLikeArrayMixin._add_comparison_ops()

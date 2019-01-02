@@ -270,3 +270,7 @@ class TestBooleanReduce(base.BaseBooleanReduceTests):
 
 class TestPrinting(base.BasePrintingTests):
     pass
+
+
+class TestParsing(base.BaseParsingTests):
+    pass

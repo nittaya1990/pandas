@@ -157,6 +157,27 @@ class SharedTests(object):
         result = arr._scalar_from_string(str(arr[0]))
         assert result == arr[0]
 
+    def test_reduce_invalid(self):
+        data = np.arange(10, dtype='i8') * 24 * 3600 * 10**9
+        arr = self.array_cls(data, freq='D')
+
+        with pytest.raises(TypeError, match='cannot perform'):
+            arr._reduce("not a method")
+
+    @pytest.mark.parametrize('method', ['pad', 'backfill'])
+    def test_fillna_method_doesnt_change_orig(self, method):
+        data = np.arange(10, dtype='i8') * 24 * 3600 * 10**9
+        arr = self.array_cls(data, freq='D')
+        arr[4] = pd.NaT
+
+        fill_value = arr[3] if method == 'pad' else arr[5]
+
+        result = arr.fillna(method=method)
+        assert result[4] == fill_value
+
+        # check that the original was not changed
+        assert arr[4] is pd.NaT
+
     def test_searchsorted(self):
         data = np.arange(10, dtype='i8') * 24 * 3600 * 10**9
         arr = self.array_cls(data, freq='D')

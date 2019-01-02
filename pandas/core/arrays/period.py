@@ -12,19 +12,17 @@ from pandas._libs.tslibs.period import (
 from pandas._libs.tslibs.timedeltas import Timedelta, delta_to_nanoseconds
 import pandas.compat as compat
 from pandas.util._decorators import Appender, cache_readonly
-from pandas.util._validators import validate_fillna_kwargs
 
 from pandas.core.dtypes.common import (
-    _TD_DTYPE, ensure_object, is_array_like, is_datetime64_dtype,
-    is_float_dtype, is_list_like, is_period_dtype, pandas_dtype)
+    _TD_DTYPE, ensure_object, is_datetime64_dtype, is_float_dtype,
+    is_list_like, is_period_dtype, pandas_dtype)
 from pandas.core.dtypes.dtypes import PeriodDtype
 from pandas.core.dtypes.generic import ABCIndexClass, ABCPeriodIndex, ABCSeries
 from pandas.core.dtypes.missing import isna, notna
 
 import pandas.core.algorithms as algos
-from pandas.core.arrays import ExtensionArray, datetimelike as dtl
+from pandas.core.arrays import datetimelike as dtl
 import pandas.core.common as com
-from pandas.core.missing import backfill_1d, pad_1d
 
 from pandas.tseries import frequencies
 from pandas.tseries.offsets import DateOffset, Tick, _delta_to_tick
@@ -92,9 +90,7 @@ def _period_array_cmp(cls, op):
     return compat.set_function_name(wrapper, opname, cls)
 
 
-class PeriodArray(dtl.DatetimeLikeArrayMixin,
-                  dtl.DatelikeOps,
-                  ExtensionArray):
+class PeriodArray(dtl.DatetimeLikeArrayMixin, dtl.DatelikeOps):
     """
     Pandas ExtensionArray for storing Period data.
 
@@ -183,8 +179,7 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
 
     @classmethod
     def _simple_new(cls, values, freq=None, **kwargs):
-        # TODO(DatetimeArray): remove once all constructors are aligned.
-        # alias from PeriodArray.__init__
+        # alias for PeriodArray.__init__
         return cls(values, freq=freq, **kwargs)
 
     @classmethod
@@ -272,11 +267,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
     @cache_readonly
     def dtype(self):
         return self._dtype
-
-    @property
-    def _ndarray_values(self):
-        # Ordinals
-        return self._data
 
     @property
     def freq(self):
@@ -383,86 +373,9 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
                              "Got '{got}'.".format(got=fill_value))
         return fill_value
 
-    def fillna(self, value=None, method=None, limit=None):
-        # TODO(#20300)
-        # To avoid converting to object, we re-implement here with the changes
-        # 1. Passing `_data` to func instead of self.astype(object)
-        # 2. Re-boxing output of 1.
-        # #20300 should let us do this kind of logic on ExtensionArray.fillna
-        # and we can use it.
-
-        if isinstance(value, ABCSeries):
-            value = value._values
-
-        value, method = validate_fillna_kwargs(value, method)
-
-        mask = self.isna()
-
-        if is_array_like(value):
-            if len(value) != len(self):
-                raise ValueError("Length of 'value' does not match. Got ({}) "
-                                 " expected {}".format(len(value), len(self)))
-            value = value[mask]
-
-        if mask.any():
-            if method is not None:
-                func = pad_1d if method == 'pad' else backfill_1d
-                new_values = func(self._data, limit=limit,
-                                  mask=mask)
-                new_values = type(self)(new_values, freq=self.freq)
-            else:
-                # fill with value
-                new_values = self.copy()
-                new_values[mask] = value
-        else:
-            new_values = self.copy()
-        return new_values
-
-    def value_counts(self, dropna=False):
-        from pandas import Series, PeriodIndex
-
-        if dropna:
-            values = self[~self.isna()]._data
-        else:
-            values = self._data
-
-        cls = type(self)
-
-        result = algos.value_counts(values, sort=False)
-        index = PeriodIndex(cls(result.index, freq=self.freq),
-                            name=result.index.name)
-        return Series(result.values, index=index, name=result.name)
-
     # --------------------------------------------------------------------
 
-    def shift(self, periods=1, fill_value=None):
-        """
-        Shift values by desired number.
-
-        Newly introduced missing values are filled with
-        ``self.dtype.na_value``.
-
-        .. versionadded:: 0.24.0
-
-        Parameters
-        ----------
-        periods : int, default 1
-            The number of periods to shift. Negative values are allowed
-            for shifting backwards.
-        fill_value : optional, default NaT
-
-            .. versionadded:: 0.24.0
-
-        Returns
-        -------
-        shifted : PeriodArray
-        """
-        # TODO(DatetimeArray): remove
-        # The semantics for Index.shift differ from EA.shift
-        # then just call super.
-        return ExtensionArray.shift(self, periods, fill_value=fill_value)
-
-    def _time_shift(self, n, freq=None):
+    def _time_shift(self, periods, freq=None):
         """
         Shift each value by `periods`.
 
@@ -481,7 +394,7 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
             raise TypeError("`freq` argument is not supported for "
                             "{cls}._time_shift"
                             .format(cls=type(self).__name__))
-        values = self.asi8 + n * self.freq.n
+        values = self.asi8 + periods * self.freq.n
         if self._hasnans:
             values[self._isnan] = iNaT
         return type(self)(values, freq=self.freq)
@@ -556,7 +469,6 @@ class PeriodArray(dtl.DatetimeLikeArrayMixin,
         """
         actually format my specific types
         """
-        # TODO(DatetimeArray): remove
         values = self.astype(object)
 
         if date_format:
