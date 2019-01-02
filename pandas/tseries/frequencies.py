@@ -24,7 +24,7 @@ from pandas.util._decorators import cache_readonly
 
 from pandas.core.dtypes.common import (
     is_datetime64_dtype, is_period_arraylike, is_timedelta64_dtype)
-from pandas.core.dtypes.generic import ABCSeries
+from pandas.core.dtypes.generic import ABCSeries, ABCDatetimeArray
 
 from pandas.core.algorithms import unique
 
@@ -265,7 +265,7 @@ def infer_freq(index, warn=True):
                             "type {type}".format(type=type(index)))
         index = index.values
 
-    if not isinstance(index, pd.DatetimeIndex):
+    if not isinstance(index, (pd.DatetimeIndex, ABCDatetimeArray)):
         try:
             index = pd.DatetimeIndex(index)
         except AmbiguousTimeError:

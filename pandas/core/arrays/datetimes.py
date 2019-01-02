@@ -306,6 +306,28 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
         self._dtype = dtype
         self._freq = freq
 
+        # TODO:
+        if freq:
+            self._validate_frequency(freq)
+
+    def _validate_frequency(self, freq):
+        periods = len(self)
+
+        if not periods:
+            return
+        start = self[0]
+        i8values = self.asi8
+        inferred = self.inferred_freq
+
+        try:
+            on_freq, _ = type(self)._generate_range_values(start, end=None, periods=periods, freq=freq)
+            if not np.array_equal(i8values, on_freq):
+                raise ValueError
+        except ValueError:
+            raise ValueError('Inferred frequency {infer} from passed values '
+                             'does not conform to passed frequency {passed}'
+                             .format(infer=inferred, passed=freq.freqstr))
+
     @classmethod
     def _simple_new(cls, values, freq=None, tz=None):
         """
@@ -334,7 +356,8 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
 
         if inferred_freq is None and freq is not None:
             # this condition precludes `freq_infer`
-            cls._validate_frequency(result, freq, ambiguous=ambiguous)
+            # this duplicates work.
+            result._validate_frequency(freq)
 
         elif freq_infer:
             result.freq = to_offset(result.inferred_freq)
@@ -342,7 +365,7 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
         return result
 
     @classmethod
-    def _generate_range(cls, start, end, periods, freq, tz=None,
+    def _generate_range_values(cls, start, end, periods, freq, tz=None,
                         normalize=False, ambiguous='raise',
                         nonexistent='raise', closed=None):
 
@@ -394,22 +417,26 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
                 if end is not None:
                     end = end.tz_localize(None)
             # TODO: consider re-implementing _cached_range; GH#17914
-            values, _tz = generate_regular_range(start, end, periods, freq)
-            index = cls._simple_new(values, freq=freq, tz=_tz)
+            # TODO: the extraction should be done earlier if possible.
+            # It messes up the signature.
+            arr, _tz = generate_regular_range(start, end, periods, freq)
+            # XXX: bad
+            # index = cls._simple_new(values, freq=freq, tz=_tz)
+            if _tz:
+                tz = _tz
 
-            if tz is not None and index.tz is None:
+            if tz is not None and _tz is None:
                 arr = conversion.tz_localize_to_utc(
-                    index.asi8,
+                    arr.view('i8'),
                     tz, ambiguous=ambiguous, nonexistent=nonexistent)
 
-                index = cls(arr)
+                # XXX: bad
+                # index = cls(arr)
 
-                # index is localized datetime64 array -> have to convert
-                # start/end as well to compare
                 if start is not None:
-                    start = start.tz_localize(tz).asm8
+                    start = start.tz_localize(tz)
                 if end is not None:
-                    end = end.tz_localize(tz).asm8
+                    end = end.tz_localize(tz)
         else:
             # Create a linearly spaced date_range in local time
             # Nanosecond-granularity timestamps aren't always correctly
@@ -418,16 +445,30 @@ class DatetimeArrayMixin(dtl.DatetimeLikeArrayMixin,
             arr = np.linspace(
                 0, end.value - start.value,
                 periods, dtype='int64') + start.value
-            index = cls._simple_new(
-                arr.astype('M8[ns]', copy=False), freq=None, tz=tz
-            )
+            # XXX: bad
+            # index = cls._simple_new(
+            #     arr.astype('M8[ns]', copy=False), freq=None, tz=tz
+            # )
 
-        if not left_closed and len(index) and index[0] == start:
-            index = index[1:]
-        if not right_closed and len(index) and index[-1] == end:
-            index = index[:-1]
+        arr = arr.view("i8")
 
-        return cls._simple_new(index.asi8, freq=freq, tz=tz)
+        if not left_closed and len(arr) and arr[0] == start.value:
+            arr = arr[1:]
+        if not right_closed and len(arr) and arr[-1] == end.value:
+            arr = arr[:-1]
+
+        return arr, tz
+
+    @classmethod
+    def _generate_range(cls, start, end, periods, freq, tz=None,
+                        normalize=False, ambiguous='raise',
+                        nonexistent='raise', closed=None):
+        arr, tz = cls._generate_range_values(
+            start, end, periods, freq, tz=tz,
+            normalize=normalize, ambiguous=ambiguous,
+            nonexistent=nonexistent, closed=closed
+        )
+        return cls._simple_new(arr, freq=freq, tz=tz)
 
     # -----------------------------------------------------------------
     # DatetimeLike Interface
