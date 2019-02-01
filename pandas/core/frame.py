@@ -71,7 +71,7 @@ from pandas.core.dtypes.common import (
     is_iterator,
     is_sequence,
     is_named_tuple)
-from pandas.core.dtypes.generic import ABCSeries, ABCIndexClass, ABCMultiIndex
+from pandas.core.dtypes.generic import ABCSeries, ABCIndexClass
 from pandas.core.dtypes.missing import isna, notna
 
 from pandas.core import algorithms
@@ -4151,21 +4151,6 @@ class DataFrame(NDFrame):
         elif not isinstance(keys, list):
             raise ValueError(err_msg)
 
-        missing = []
-        for col in keys:
-            if (is_scalar(col) or isinstance(col, tuple)):
-                # if col is a valid column key, everything is fine
-                # tuples are always considered keys, never as list-likes
-                if col not in self:
-                    missing.append(col)
-            elif (not isinstance(col, (ABCIndexClass, ABCSeries,
-                                       np.ndarray, list))
-                  or getattr(col, 'ndim', 1) > 1):
-                raise ValueError(err_msg)
-
-        if missing:
-            raise KeyError('{}'.format(missing))
-
         if inplace:
             frame = self
         else:
@@ -4175,7 +4160,7 @@ class DataFrame(NDFrame):
         names = []
         if append:
             names = [x for x in self.index.names]
-            if isinstance(self.index, ABCMultiIndex):
+            if isinstance(self.index, MultiIndex):
                 for i in range(self.index.nlevels):
                     arrays.append(self.index._get_level_values(i))
             else:
@@ -4183,23 +4168,29 @@ class DataFrame(NDFrame):
 
         to_remove = []
         for col in keys:
-            if isinstance(col, ABCMultiIndex):
-                for n in range(col.nlevels):
+            if isinstance(col, MultiIndex):
+                # append all but the last column so we don't have to modify
+                # the end of this loop
+                for n in range(col.nlevels - 1):
                     arrays.append(col._get_level_values(n))
+
+                level = col._get_level_values(col.nlevels - 1)
                 names.extend(col.names)
-            elif isinstance(col, (ABCIndexClass, ABCSeries)):
-                # if Index then not MultiIndex (treated above)
-                arrays.append(col)
+            elif isinstance(col, Series):
+                level = col._values
                 names.append(col.name)
-            elif isinstance(col, (list, np.ndarray)):
-                arrays.append(col)
+            elif isinstance(col, Index):
+                level = col
+                names.append(col.name)
+            elif isinstance(col, (list, np.ndarray, Index)):
+                level = col
                 names.append(None)
-            # from here, col can only be a column label
             else:
-                arrays.append(frame[col]._values)
+                level = frame[col]._values
                 names.append(col)
                 if drop:
                     to_remove.append(col)
+            arrays.append(level)
 
         index = ensure_index_from_sequences(arrays, names)
 
@@ -4208,8 +4199,7 @@ class DataFrame(NDFrame):
             raise ValueError('Index has duplicate keys: {dup}'.format(
                 dup=duplicates))
 
-        # use set to handle duplicate column names gracefully in case of drop
-        for c in set(to_remove):
+        for c in to_remove:
             del frame[c]
 
         # clear up memory usage
