@@ -505,3 +505,28 @@ def register_converter_cb(key):
 with cf.config_prefix("plotting.matplotlib"):
     cf.register_option("register_converters", True, register_converter_doc,
                        validator=bool, cb=register_converter_cb)
+
+
+plotting_backend_doc = """
+: str
+    The plotting backend to use.
+"""
+
+
+def plotting_backend_cb(key):
+    from pandas import Series, DataFrame
+    from pandas.plotting._base import _backends
+    from pandas.core.accessor import CachedAccessor
+
+    backend_name = cf.get_option(key)
+    print('registering', backend_name)
+    backend = _backends[backend_name]
+
+    Series.plot = CachedAccessor("plot", backend.series)
+    DataFrame.plot = CachedAccessor("plot", backend.frame)
+
+
+with cf.config_prefix("plotting"):
+    cf.register_option("backend", defval="matplotlib",
+                       doc=plotting_backend_doc,
+                       cb=plotting_backend_cb)

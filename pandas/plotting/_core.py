@@ -32,6 +32,8 @@ from pandas.plotting._tools import (
     _flatten, _get_all_lines, _get_xlim, _handle_shared_axes, _set_ticks_props,
     _subplots, format_date_labels, table)
 
+from ._base import FramePlotMethods, SeriesPlotMethods, register_backend
+
 try:
     from pandas.plotting import _converter
 except ImportError:
@@ -2697,16 +2699,11 @@ def _grouped_plot_by_column(plotf, data, columns=None, by=None,
     return result
 
 
-class BasePlotMethods(PandasObject):
-
-    def __init__(self, data):
-        self._parent = data  # can be Series or DataFrame
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError
+class BaseMPLMethods(PandasObject):
+    pass
 
 
-class SeriesPlotMethods(BasePlotMethods):
+class MPLSeriesMethods(BaseMPLMethods, SeriesPlotMethods):
     """
     Series plotting accessor and method.
 
@@ -2906,7 +2903,7 @@ class SeriesPlotMethods(BasePlotMethods):
         return self(kind='pie', **kwds)
 
 
-class FramePlotMethods(BasePlotMethods):
+class FramePlotMethods(BaseMPLMethods, FramePlotMethods):
     """DataFrame plotting accessor and method
 
     Examples
@@ -3600,3 +3597,6 @@ class FramePlotMethods(BasePlotMethods):
         if gridsize is not None:
             kwds['gridsize'] = gridsize
         return self(kind='hexbin', x=x, y=y, C=C, **kwds)
+
+
+register_backend('matplotlib', SeriesPlotMethods, FramePlotMethods)
