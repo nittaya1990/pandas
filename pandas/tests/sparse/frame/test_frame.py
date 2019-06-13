@@ -6,6 +6,7 @@ import pytest
 
 from pandas._libs.sparse import BlockIndex, IntIndex
 from pandas.errors import PerformanceWarning
+import pandas.util._test_decorators as td
 
 import pandas as pd
 from pandas import DataFrame, Series, bdate_range, compat
@@ -22,6 +23,18 @@ from pandas.tseries.offsets import BDay
 def test_deprecated():
     with tm.assert_produces_warning(FutureWarning):
         pd.SparseDataFrame({"A": [1, 2]})
+
+
+@td.skip_if_no_scipy
+def test_single_warning_from_spmatrix():
+    import scipy.sparse
+
+    arr = scipy.sparse.rand(10, 10, 0.5)
+    with tm.assert_produces_warning(FutureWarning,
+                                    check_stacklevel=False) as w:
+        pd.SparseDataFrame(arr)
+
+    assert len(w) == 1
 
 
 @pytest.mark.filterwarnings("ignore:Sparse:FutureWarning")
