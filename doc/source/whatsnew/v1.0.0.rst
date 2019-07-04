@@ -191,6 +191,24 @@ method on a :func:`pandas.api.indexers.BaseIndexer` subclass that will generate 
 indices used for each window during the rolling aggregation. For more details and example usage, see
 the :ref:`custom window rolling documentation <stats.custom_rolling_window>`
 
+.. _whatsnew_1000.sorting_keys:
+
+Sorting with keys
+^^^^^^^^^^^^^^^^^
+
+We've added a ``key`` argument to the DataFrame and Series sorting methods, including
+:meth:`DataFrame.sort_values`, :meth:`DataFrame.sort_index`, :meth:`Series.sort_index`,
+and :meth:`Series.sort_index`. The ``key`` can be any callable function which is applied
+to each element of the frame, series, or index before sorting.
+
+.. ipython:: python
+
+   s = pd.Series(['C', 'a', 'B'])
+   s.sort_values()
+   s.sort_values(key=str.lower)
+
+For more details, see examples and documentation in :meth:`DataFrame.sort_values`.
+
 .. _whatsnew_1000.enhancements.other:
 
 Other enhancements
@@ -227,6 +245,7 @@ Other enhancements
 - Added new writer for exporting Stata dta files in version 118, ``StataWriter118``.  This format supports exporting strings containing Unicode characters (:issue:`23573`)
 - :meth:`Series.map` now accepts ``collections.abc.Mapping`` subclasses as a mapper (:issue:`29733`)
 - The ``pandas.datetime`` class is now deprecated. Import from ``datetime`` instead (:issue:`30296`)
+
 
 
 

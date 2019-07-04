@@ -1,7 +1,7 @@
 from datetime import datetime
 import operator
 from textwrap import dedent
-from typing import Dict, FrozenSet, Hashable, Optional, Union
+from typing import Callable, Dict, FrozenSet, Hashable, Optional, Union
 import warnings
 
 import numpy as np
@@ -74,6 +74,7 @@ from pandas.core.indexes.frozen import FrozenList
 import pandas.core.missing as missing
 from pandas.core.ops import get_op_result_name
 from pandas.core.ops.invalid import make_invalid_op
+from pandas.core.sorting import ensure_key_mapped
 from pandas.core.strings import StringMethods
 
 from pandas.io.formats.printing import (
@@ -4188,7 +4189,9 @@ class Index(IndexOpsMixin, PandasObject):
 
         return result
 
-    def sort_values(self, return_indexer=False, ascending=True):
+    def sort_values(
+        self, return_indexer=False, ascending=True, key: Optional[Callable] = None
+    ):
         """
         Return a sorted copy of the index.
 
@@ -4201,6 +4204,11 @@ class Index(IndexOpsMixin, PandasObject):
             Should the indices that would sort the index be returned.
         ascending : bool, default True
             Should the index values be sorted in an ascending order.
+        key : Callable, default None
+            Apply a key function to the indices before sorting, like
+            built-in sorted function.
+
+            .. versionadded:: 1.0.0
 
         Returns
         -------
@@ -4231,7 +4239,9 @@ class Index(IndexOpsMixin, PandasObject):
         >>> idx.sort_values(ascending=False, return_indexer=True)
         (Int64Index([1000, 100, 10, 1], dtype='int64'), array([3, 1, 0, 2]))
         """
-        _as = self.argsort()
+        idx = ensure_key_mapped(self, key)
+
+        _as = idx.argsort()
         if not ascending:
             _as = _as[::-1]
 
@@ -4342,8 +4352,10 @@ class Index(IndexOpsMixin, PandasObject):
         Index(['a', 'b', 'c', 'd'], dtype='object')
         """
         result = self.asi8
+
         if result is None:
             result = np.array(self)
+
         return result.argsort(*args, **kwargs)
 
     _index_shared_docs[

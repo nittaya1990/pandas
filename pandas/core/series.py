@@ -74,6 +74,7 @@ from pandas.core.indexes.period import PeriodIndex
 from pandas.core.indexes.timedeltas import TimedeltaIndex
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.internals import SingleBlockManager
+from pandas.core.sorting import ensure_key_mapped
 from pandas.core.strings import StringMethods
 from pandas.core.tools.datetimes import to_datetime
 
@@ -2757,7 +2758,7 @@ Name: Max Speed, dtype: float64
     # ----------------------------------------------------------------------
     # Reindexing, sorting
 
-    def sort_values(
+    def sort_values(  # type: ignore[override] # NOQA
         self,
         axis=0,
         ascending=True,
@@ -2765,6 +2766,7 @@ Name: Max Speed, dtype: float64
         kind="quicksort",
         na_position="last",
         ignore_index=False,
+        key: Optional[Callable] = None,
     ):
         """
         Sort by the values.
@@ -2791,6 +2793,12 @@ Name: Max Speed, dtype: float64
              If True, the resulting axis will be labeled 0, 1, …, n - 1.
 
              .. versionadded:: 1.0.0
+
+        key : Callable, default None
+            If not None, apply the key function to every element before
+            sorting. Identical to key argument in built-in sorted function.
+
+            .. versionadded:: 1.0.0
 
         Returns
         -------
@@ -2873,6 +2881,24 @@ Name: Max Speed, dtype: float64
         2    d
         0    z
         dtype: object
+
+        Sort using a key function
+
+        >>> s = pd.Series(['a', 'B', 'c', 'D', 'e'])
+        >>> s.sort_values()
+        1    B
+        3    D
+        0    a
+        2    c
+        4    e
+        dtype: object
+        >>> s.sort_values(key=str.lower)
+        0    a
+        1    B
+        2    c
+        3    D
+        4    e
+        dtype: object
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Validate the axis parameter
@@ -2886,6 +2912,8 @@ Name: Max Speed, dtype: float64
             )
 
         def _try_kind_sort(arr):
+            arr = ensure_key_mapped(arr, key)
+
             # easier to ask forgiveness than permission
             try:
                 # if kind==mergesort, it can fail for object dtype
@@ -2949,6 +2977,7 @@ Name: Max Speed, dtype: float64
         na_position="last",
         sort_remaining=True,
         ignore_index: bool = False,
+        key: Optional[Callable] = None,
     ):
         """
         Sort Series by index labels.
@@ -2979,6 +3008,12 @@ Name: Max Speed, dtype: float64
             levels too (in order) after sorting by specified level.
         ignore_index : bool, default False
             If True, the resulting axis will be labeled 0, 1, …, n - 1.
+
+            .. versionadded:: 1.0.0
+
+        key : Callable, default None
+            If not None, apply the key function to every index element before
+            sorting. Identical to key argument in built-in sorted function.
 
             .. versionadded:: 1.0.0
 
@@ -3063,22 +3098,37 @@ Name: Max Speed, dtype: float64
         baz  two    5
         bar  two    7
         dtype: int64
+
+        >>> s = Series([1, 2, 3, 4, 5, 6, 7, 8])
+        >>> s.sort_index(key=lambda x : -x)
+        7    8
+        6    7
+        5    6
+        4    5
+        3    4
+        2    3
+        1    2
+        0    1
+        dtype: int64
         """
+
         # TODO: this can be combined with DataFrame.sort_index impl as
         # almost identical
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Validate the axis parameter
         self._get_axis_number(axis)
-        index = self.index
+        index = ensure_key_mapped(self.index, key)
 
         if level is not None:
             new_index, indexer = index.sortlevel(
                 level, ascending=ascending, sort_remaining=sort_remaining
             )
+
         elif isinstance(index, MultiIndex):
             from pandas.core.sorting import lexsort_indexer
 
             labels = index._sort_levels_monotonic()
+
             indexer = lexsort_indexer(
                 labels._get_codes_for_sorting(),
                 orders=ascending,
@@ -3102,7 +3152,7 @@ Name: Max Speed, dtype: float64
             )
 
         indexer = ensure_platform_int(indexer)
-        new_index = index.take(indexer)
+        new_index = self.index.take(indexer)
         new_index = new_index._sort_levels_monotonic()
 
         new_values = self._values.take(indexer)

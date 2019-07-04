@@ -1,4 +1,6 @@
 """ miscellaneous sorting / groupby utilities """
+from typing import Callable, Optional
+
 import numpy as np
 
 from pandas._libs import algos, hashtable, lib
@@ -10,6 +12,7 @@ from pandas.core.dtypes.common import (
     is_categorical_dtype,
     is_extension_array_dtype,
 )
+from pandas.core.dtypes.generic import ABCIndexClass
 from pandas.core.dtypes.missing import isna
 
 import pandas.core.algorithms as algorithms
@@ -189,11 +192,28 @@ def indexer_from_factorized(labels, shape, compress: bool = True):
     return get_group_index_sorter(ids, ngroups)
 
 
-def lexsort_indexer(keys, orders=None, na_position: str = "last"):
+def lexsort_indexer(
+    keys, orders=None, na_position: str = "last", key: Optional[Callable] = None
+):
     """
+    Performs lexical sorting on a set of keys
+
     Parameters
     ----------
+    keys : sequence of arrays
+        Sequence of ndarrays to be sorted by the indexer
+    orders : boolean or list of booleans, optional
+        Determines the sorting order for each element in keys. If a list,
+        it must be the same length as keys. This determines whether the
+        corresponding element in keys should be sorted in ascending
+        (True) or descending (False) order. if bool, applied to all
+        elements as above. if None, defaults to True.
     na_position : {'first', 'last'}, default 'last'
+        Determines placement of NA elements in the sorted list ("last" or "first")
+    key : Callable, optional
+        Callable key function applied to every element in keys before sorting
+
+        .. versionadded:: 1.0.0
     """
     from pandas.core.arrays import Categorical
 
@@ -204,15 +224,16 @@ def lexsort_indexer(keys, orders=None, na_position: str = "last"):
     elif orders is None:
         orders = [True] * len(keys)
 
-    for key, order in zip(keys, orders):
+    keys = [ensure_key_mapped(k, key) for k in keys]
 
+    for k, order in zip(keys, orders):
         # we are already a Categorical
-        if is_categorical_dtype(key):
-            cat = key
+        if is_categorical_dtype(k):
+            cat = k
 
         # create the Categorical
         else:
-            cat = Categorical(key, ordered=True)
+            cat = Categorical(k, ordered=True)
 
         if na_position not in ["last", "first"]:
             raise ValueError(f"invalid na_position: {na_position}")
@@ -241,20 +262,25 @@ def lexsort_indexer(keys, orders=None, na_position: str = "last"):
 
 
 def nargsort(
-    items, kind: str = "quicksort", ascending: bool = True, na_position: str = "last"
+    items,
+    kind: str = "quicksort",
+    ascending: bool = True,
+    na_position: str = "last",
+    key: Optional[Callable] = None,
 ):
     """
     Intended to be a drop-in replacement for np.argsort which handles NaNs.
 
-    Adds ascending and na_position parameters.
+    Adds ascending, na_position, and key parameters.
 
-    (GH #6399, #5231)
+    (GH #6399, #5231, #27237)
 
     Parameters
     ----------
     kind : str, default 'quicksort'
     ascending : bool, default True
     na_position : {'first', 'last'}, default 'last'
+    key : Optional[Callable], default None
     """
     items = extract_array(items)
     mask = np.asarray(isna(items))
@@ -264,9 +290,16 @@ def nargsort(
     else:
         items = np.asanyarray(items)
 
+    if key is not None:
+        items = ensure_key_mapped(items, key)
+        return nargsort(
+            items, kind=kind, ascending=ascending, na_position=na_position, key=None
+        )
+
     idx = np.arange(len(items))
     non_nans = items[~mask]
     non_nan_idx = idx[~mask]
+
     nan_idx = np.nonzero(mask)[0]
     if not ascending:
         non_nans = non_nans[::-1]
@@ -283,6 +316,28 @@ def nargsort(
     else:
         raise ValueError(f"invalid na_position: {na_position}")
     return indexer
+
+
+def ensure_key_mapped(values, key: Optional[Callable]):
+    """
+    Applies a callable key function to elements in an Index subclass or
+    an ndarray. Uses index.map for index subclasses and ignores nan values
+    in ndarrays.
+
+    Parameters
+    ----------
+    values : Index subclass or ndarray
+    key : Optional[Callable], key to be called on every index or entry in ndarray.
+    """
+    if not key:
+        return values
+
+    if isinstance(values, ABCIndexClass):
+        return values.map(key, na_action="ignore")
+    elif isinstance(values, np.ndarray):
+        return lib.map_infer_mask(values, key, isna(values).view(np.uint8))
+    else:
+        raise TypeError(f"Could not map key to object of type {type(values)}")
 
 
 class _KeyMapper:

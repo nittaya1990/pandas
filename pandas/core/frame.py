@@ -17,6 +17,7 @@ from textwrap import dedent
 from typing import (
     IO,
     Any,
+    Callable,
     FrozenSet,
     Hashable,
     Iterable,
@@ -121,6 +122,7 @@ from pandas.core.internals.construction import (
 )
 from pandas.core.ops.missing import dispatch_fill_zeros
 from pandas.core.series import Series
+from pandas.core.sorting import ensure_key_mapped
 
 from pandas.io.common import get_filepath_or_buffer
 from pandas.io.formats import console, format as fmt
@@ -4855,10 +4857,9 @@ class DataFrame(NDFrame):
 
     # ----------------------------------------------------------------------
     # Sorting
-
     @Substitution(**_shared_doc_kwargs)
     @Appender(NDFrame.sort_values.__doc__)
-    def sort_values(
+    def sort_values(  # type: ignore[override] # NOQA
         self,
         by,
         axis=0,
@@ -4867,7 +4868,13 @@ class DataFrame(NDFrame):
         kind="quicksort",
         na_position="last",
         ignore_index=False,
+        key: Optional[Callable] = None,
     ):
+        if key is not None:
+            raise NotImplementedError(
+                "Key sorting for DataFrame::sort_values has not been implemented"
+            )
+
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
 
@@ -4881,7 +4888,9 @@ class DataFrame(NDFrame):
             from pandas.core.sorting import lexsort_indexer
 
             keys = [self._get_label_or_level_values(x, axis=axis) for x in by]
-            indexer = lexsort_indexer(keys, orders=ascending, na_position=na_position)
+            indexer = lexsort_indexer(
+                keys, orders=ascending, na_position=na_position, key=key
+            )
             indexer = ensure_platform_int(indexer)
         else:
             from pandas.core.sorting import nargsort
@@ -4893,7 +4902,7 @@ class DataFrame(NDFrame):
                 ascending = ascending[0]
 
             indexer = nargsort(
-                k, kind=kind, ascending=ascending, na_position=na_position
+                k, kind=kind, ascending=ascending, na_position=na_position, key=key
             )
 
         new_data = self._data.take(
@@ -4920,6 +4929,7 @@ class DataFrame(NDFrame):
         na_position="last",
         sort_remaining=True,
         ignore_index: bool = False,
+        key: Optional[Callable] = None,
     ):
 
         # TODO: this can be combined with Series.sort_index impl as
@@ -4929,12 +4939,12 @@ class DataFrame(NDFrame):
 
         axis = self._get_axis_number(axis)
         labels = self._get_axis(axis)
+        labels = ensure_key_mapped(labels, key)
 
         # make sure that the axis is lexsorted to start
         # if not we need to reconstruct to get the correct indexer
         labels = labels._sort_levels_monotonic()
         if level is not None:
-
             new_axis, indexer = labels.sortlevel(
                 level, ascending=ascending, sort_remaining=sort_remaining
             )

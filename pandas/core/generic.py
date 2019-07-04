@@ -87,6 +87,7 @@ import pandas.core.indexing as indexing
 from pandas.core.internals import BlockManager
 from pandas.core.missing import find_valid_index
 from pandas.core.ops import _align_method_FRAME
+from pandas.core.sorting import ensure_key_mapped
 
 from pandas.io.formats import format as fmt
 from pandas.io.formats.format import DataFrameFormatter, format_percentiles
@@ -4094,6 +4095,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         kind: str = "quicksort",
         na_position: str = "last",
         ignore_index: bool_t = False,
+        key: Optional[Callable] = None,
     ):
         """
         Sort by the values along either axis.
@@ -4121,6 +4123,12 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
              .. versionadded:: 1.0.0
 
+        key : Callable, default None
+             If not None, apply the key function to every element before
+             sorting. Identical to key argument in built-in sorted function.
+
+             .. versionadded:: 1.0.0
+
         Returns
         -------
         sorted_obj : DataFrame or None
@@ -4132,59 +4140,60 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         ...     'col1': ['A', 'A', 'B', np.nan, 'D', 'C'],
         ...     'col2': [2, 1, 9, 8, 7, 4],
         ...     'col3': [0, 1, 9, 4, 2, 3],
+        ...     'col4': ['a', 'B', 'c', 'D', 'e', 'F']
         ... })
         >>> df
-            col1 col2 col3
-        0   A    2    0
-        1   A    1    1
-        2   B    9    9
-        3   NaN  8    4
-        4   D    7    2
-        5   C    4    3
+          col1  col2  col3 col4
+        0    A     2     0    a
+        1    A     1     1    B
+        2    B     9     9    c
+        3  NaN     8     4    D
+        4    D     7     2    e
+        5    C     4     3    F
 
         Sort by col1
 
         >>> df.sort_values(by=['col1'])
-            col1 col2 col3
-        0   A    2    0
-        1   A    1    1
-        2   B    9    9
-        5   C    4    3
-        4   D    7    2
-        3   NaN  8    4
+          col1  col2  col3 col4
+        0    A     2     0    a
+        1    A     1     1    B
+        2    B     9     9    c
+        5    C     4     3    F
+        4    D     7     2    e
+        3  NaN     8     4    D
 
         Sort by multiple columns
 
         >>> df.sort_values(by=['col1', 'col2'])
-            col1 col2 col3
-        1   A    1    1
-        0   A    2    0
-        2   B    9    9
-        5   C    4    3
-        4   D    7    2
-        3   NaN  8    4
+          col1  col2  col3 col4
+        1    A     1     1    B
+        0    A     2     0    a
+        2    B     9     9    c
+        5    C     4     3    F
+        4    D     7     2    e
+        3  NaN     8     4    D
 
         Sort Descending
 
         >>> df.sort_values(by='col1', ascending=False)
-            col1 col2 col3
-        4   D    7    2
-        5   C    4    3
-        2   B    9    9
-        0   A    2    0
-        1   A    1    1
-        3   NaN  8    4
+          col1  col2  col3 col4
+        4    D     7     2    e
+        5    C     4     3    F
+        2    B     9     9    c
+        0    A     2     0    a
+        1    A     1     1    B
+        3  NaN     8     4    D
 
         Putting NAs first
 
         >>> df.sort_values(by='col1', ascending=False, na_position='first')
-            col1 col2 col3
-        3   NaN  8    4
-        4   D    7    2
-        5   C    4    3
-        2   B    9    9
-        0   A    2    0
-        1   A    1    1
+          col1  col2  col3 col4
+        3  NaN     8     4    D
+        4    D     7     2    e
+        5    C     4     3    F
+        2    B     9     9    c
+        0    A     2     0    a
+        1    A     1     1    B
         """
         raise AbstractMethodError(self)
 
@@ -4198,6 +4207,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         na_position: str = "last",
         sort_remaining: bool_t = True,
         ignore_index: bool_t = False,
+        key: Optional[Callable] = None,
     ):
         """
         Sort object by labels (along an axis).
@@ -4229,6 +4239,12 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
             .. versionadded:: 1.0.0
 
+        key : Callable, default None
+            If not None, apply the key function to every index element before
+            sorting. Identical to key argument in built-in sorted function.
+
+            .. versionadded:: 1.0.0
+
         Returns
         -------
         sorted_obj : DataFrame or None
@@ -4238,6 +4254,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         axis = self._get_axis_number(axis)
         axis_name = self._get_axis_name(axis)
         labels = self._get_axis(axis)
+        labels = ensure_key_mapped(labels, key)
 
         if level is not None:
             raise NotImplementedError("level is not implemented")

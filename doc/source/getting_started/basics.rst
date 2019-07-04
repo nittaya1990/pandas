@@ -1806,6 +1806,15 @@ argument:
    s.sort_values()
    s.sort_values(na_position='first')
 
+Sorting also supports a ``key`` parameter that takes a callable function
+applied to every element of the dataframe before sorting:
+
+.. ipython:: python
+
+   s1 = pd.Series(['B', 'a', 'C'])
+   s1.sort_values()
+   s1.sort_values(key=str.lower)
+
 .. _basics.sort_indexes_and_values:
 
 By indexes and values
