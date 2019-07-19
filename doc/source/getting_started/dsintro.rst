@@ -109,6 +109,8 @@ provided. The value will be repeated to match the length of **index**.
 
    pd.Series(5., index=['a', 'b', 'c', 'd', 'e'])
 
+.. _dsintro.arraylike:
+
 Series is ndarray-like
 ~~~~~~~~~~~~~~~~~~~~~~
 
