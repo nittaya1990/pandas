@@ -5,11 +5,13 @@
    This is an experimental API and subject to breaking changes
    without warning.
 """
+from functools import wraps
 import operator
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from pandas._libs.lib import is_integer
 from pandas.compat import set_function_name
 from pandas.compat.numpy import function as nv
 from pandas.errors import AbstractMethodError
@@ -24,7 +26,12 @@ from pandas.core.dtypes.missing import isna
 from pandas._typing import ArrayLike
 from pandas.core import ops
 from pandas.core.algorithms import _factorize_array, unique
-from pandas.core.arrays._reshaping import can_safe_ravel, tuplify_shape
+from pandas.core.arrays._reshaping import (
+    can_safe_ravel,
+    expand_key,
+    slice_contains_zero,
+    tuplify_shape,
+)
 from pandas.core.missing import backfill_1d, pad_1d
 from pandas.core.sorting import nargsort
 
@@ -33,7 +40,191 @@ _not_implemented_message = "{} does not implement {}."
 _extension_array_shared_docs = dict()  # type: Dict[str, str]
 
 
-class ExtensionArray:
+def implement_2d(cls):
+    """
+    Patch a 1-dimension-only ExtensionArray subclass and make
+    it support limited 2-dimensional operations.
+
+    We achieve this by rewriting dimension-dependent methods to
+    pre-process the inputs to make them look 1d, call the underlying
+    method, and post-process the output.
+    """
+    if cls._allows_2d:
+        return
+
+    # TODO: sort out these namespace issues.
+    if cls.__name__ == "ExtensionArray" and cls.__module__ == __name__:
+        ExtensionArray = cls
+    else:
+        from pandas.core.arrays import ExtensionArray
+
+    # For backwards-compatibility, we use the length, size, or shape
+    # defined by the subclass. We can always define the other two in
+    # terms of the one.
+    has_size = cls.size is not ExtensionArray.size
+    has_shape = cls.shape is not ExtensionArray.shape
+
+    orig_len = cls.__len__
+    # TODO: Find a better way to do this. I suspect we could check whether
+    # our cls.bases contains ExtensionArray...
+    if hasattr(orig_len, "_original_len"):
+        # When a user does class Foo(Bar(ExtensionArray)):
+        # we want to use the unpatched verison.
+        orig_len = orig_len._original_len
+
+    orig_shape = cls.shape
+    orig_size = cls.size
+
+    @wraps(orig_len)
+    def __len__(self):
+        length = orig_len(self)
+        if self._ExtensionArray__expanded_dim is None:
+            result = length
+        elif self._ExtensionArray__expanded_dim == 0:
+            result = length
+        else:
+            result = 1
+
+        return result
+
+    cls.__len__ = __len__
+    cls.__len__._original_len = orig_len
+
+    if has_shape:
+
+        def get_shape(self):
+            # TODO: deduplicate
+            shape1 = orig_shape.fget(self)
+            shape2 = ExtensionArray.shape.fget(self)
+            if shape1 != shape2:
+                print("bad!")
+            return shape2
+
+        def set_shape(self, value):
+            # TODO: deduplicate
+            if orig_shape.fset:
+                orig_shape.fset(self, value)
+
+            ExtensionArray.shape.fset(self, value)
+
+        cls.shape = property(fget=get_shape, fset=set_shape)
+
+    if has_size:
+
+        def get_size(self):
+            # TODO: test for cyclic references
+            size1 = orig_size.fget(self)
+            size2 = ExtensionArray.size.fget(self)
+            if size1 != size2:
+                print("bad", size1, size2)
+            return size2
+
+        cls.size = property(fget=get_size)
+
+    orig_copy = cls.copy
+
+    @wraps(orig_copy)
+    def copy(self):
+        result = orig_copy(self)
+        # TODO: Can this setattr be done in the metaclass? Less likely to forget.
+        result._ExtensionArray__expanded_dim = self._ExtensionArray__expanded_dim
+        return result
+
+    cls.copy = copy
+
+    orig_getitem = cls.__getitem__
+
+    def __getitem__(self, key):
+        if self.ndim == 1:
+            return orig_getitem(self, key)
+
+        key = expand_key(key, self.shape)
+        if is_integer(key[0]):
+            assert key[0] in [0, -1]
+            result = orig_getitem(self, key[1])
+            return result
+
+        if isinstance(key[0], slice):
+            if slice_contains_zero(key[0]):
+                result = orig_getitem(self, key[1])
+                result._ExtensionArray__expanded_dim = 1
+                return result
+
+            raise NotImplementedError(key)
+        # TODO: ellipses?
+        raise NotImplementedError(key)
+
+    cls.__getitem__ = __getitem__
+
+    orig_take = cls.take
+
+    # kwargs for compat with Interval
+    # allow_fill=None instead of False is for compat with Categorical
+    def take(self, indices, allow_fill=None, fill_value=None, axis=0, **kwargs):
+        if self.ndim == 1 and axis == 0:
+            return orig_take(
+                self, indices, allow_fill=allow_fill, fill_value=fill_value, **kwargs
+            )
+
+        if self.ndim != 2 or self.shape[0] != 1:
+            raise NotImplementedError
+        if axis not in [0, 1]:
+            raise ValueError(axis)
+        if kwargs:
+            raise ValueError(
+                "kwargs should not be passed in the 2D case, "
+                "are only included for compat with Interval"
+            )
+
+        if axis == 1:
+            result = orig_take(
+                self, indices, allow_fill=allow_fill, fill_value=fill_value
+            )
+            result._ExtensionArray__expanded_dim = 1
+            return result
+
+        # For axis == 0, because we only support shape (1, N)
+        #  there are only limited indices we can accept
+        if len(indices) != 1:
+            # TODO: we could probably support zero-len here
+            raise NotImplementedError
+
+        def take_item(n):
+            if n == -1:
+                seq = [fill_value] * self.shape[1]
+                return type(self)._from_sequence(seq)
+            else:
+                return self[n, :]
+
+        arrs = [take_item(n) for n in indices]
+        result = type(self)._concat_same_type(arrs)
+        result.shape = (len(indices), self.shape[1])
+        return result
+
+    cls.take = take
+
+    orig_iter = cls.__iter__
+
+    def __iter__(self):
+        if self.ndim == 1:
+            for obj in orig_iter(self):
+                yield obj
+        else:
+            for n in range(self.shape[0]):
+                yield self[n]
+
+    cls.__iter__ = __iter__
+
+    return cls
+
+
+class Reshapable(type):
+    def __init__(cls, name: str, bases: tuple, clsdict: dict):
+        super().__init__(name, bases, clsdict)
+        implement_2d(cls)
+
+
+class ExtensionArray(metaclass=Reshapable):
     """
     Abstract base class for custom 1-D array types.
 
@@ -326,7 +517,7 @@ class ExtensionArray:
         -------
         length : int
         """
-        return self.shape[0]
+        raise AbstractMethodError()
 
     def __iter__(self):
         """
@@ -341,7 +532,13 @@ class ExtensionArray:
     # ------------------------------------------------------------------------
     # Required attributes
     # ------------------------------------------------------------------------
-    _shape = None
+    # The currently expanded dimension.
+    #   * None : (N,)   array
+    #   * 0    : (N, 1) array
+    #   * 1    : (1, N) array
+    # We use a double-underscore to mangle the name to _ExtensionArray__expanded_dim
+    # to avoid clashes with subclasses.
+    __expanded_dim = None
 
     @property
     def dtype(self) -> ExtensionDtype:
@@ -355,19 +552,41 @@ class ExtensionArray:
         """
         Return a tuple of the array dimensions.
         """
-        if self._shape is not None:
-            return self._shape
+        if not self._allows_2d:
+            length = self.__len__.__wrapped__(self)
+        else:
+            length = len(self)
 
-        # Default to 1D
-        length = self.size
-        return (length,)
+        if self._ExtensionArray__expanded_dim == 0:
+            result = length, 1
+        elif self._ExtensionArray__expanded_dim == 1:
+            result = 1, length
+        else:
+            result = (length,)
+
+        assert np.prod(result) == length
+        return result
 
     @shape.setter
     def shape(self, value):
+        # TODO: support negative dimensions in value.
         size = np.prod(value)
         if size != self.size:
             raise ValueError("Implied size must match actual size.")
-        self._shape = value
+
+        list_like = is_list_like(value)
+        if list_like and len(value) > 2:
+            raise ValueError("Only 1 or 2-dimensions allowed.")
+        elif list_like and len(value) == 2:
+            if value[1] == 1:
+                self._ExtensionArray__expanded_dim = 0
+            elif value[0] == 1:
+                self._ExtensionArray__expanded_dim = 1
+            else:
+                raise ValueError
+
+        else:
+            self._ExtensionArray__expanded_dim = None
 
     @property
     def ndim(self) -> int:
@@ -381,7 +600,7 @@ class ExtensionArray:
         """
         The number of elements in this array.
         """
-        raise AbstractMethodError(self)
+        return np.prod(self.shape)
 
     @property
     def nbytes(self) -> int:
@@ -967,7 +1186,11 @@ class ExtensionArray:
         # numpy accepts either a single tuple or an expanded tuple
         shape = tuplify_shape(self.size, shape)
         result = self.view()
-        result._shape = shape
+        result.shape = shape
+        # if len(shape) > 1:
+        #     expand_dim = int(shape[1] > 1)
+        #     result._ExtensionArray__expanded_dim = expand_dim
+        # # TODO: is this missing cases?
         return result
 
     @property
