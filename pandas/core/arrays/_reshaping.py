@@ -3,10 +3,17 @@ Utilities for implementing 2D compatibility for 1D ExtensionArrays.
 """
 from functools import wraps
 from typing import Tuple
+import warnings
 
 import numpy as np
 
 from pandas._libs.lib import is_integer
+
+msg = (
+    "ExtensionArray subclass {name} defines {method}. "
+    "In the future, this will not be supported. Please "
+    "inherit {method} from the ExtensionArray base class."
+)
 
 
 def implement_2d(cls):
@@ -42,7 +49,6 @@ def implement_2d(cls):
         orig_len = orig_len._original_len
 
     orig_shape = cls.shape
-    orig_size = cls.size
 
     @wraps(orig_len)
     def __len__(self):
@@ -60,17 +66,12 @@ def implement_2d(cls):
     cls.__len__._original_len = orig_len
 
     if has_shape:
+        warnings.warn(msg.format(name=cls.__name__, method="shape"), DeprecationWarning)
 
         def get_shape(self):
-            # TODO: deduplicate
-            shape1 = orig_shape.fget(self)
-            shape2 = ExtensionArray.shape.fget(self)
-            if shape1 != shape2:
-                print("bad!")
-            return shape2
+            return ExtensionArray.shape.fget(self)
 
         def set_shape(self, value):
-            # TODO: deduplicate
             if orig_shape.fset:
                 orig_shape.fset(self, value)
 
@@ -79,14 +80,10 @@ def implement_2d(cls):
         cls.shape = property(fget=get_shape, fset=set_shape)
 
     if has_size:
+        warnings.warn(msg.format(name=cls.__name__, method="size"), DeprecationWarning)
 
         def get_size(self):
-            # TODO: test for cyclic references
-            size1 = orig_size.fget(self)
-            size2 = ExtensionArray.size.fget(self)
-            if size1 != size2:
-                print("bad", size1, size2)
-            return size2
+            return ExtensionArray.size.fget(self)
 
         cls.size = property(fget=get_size)
 

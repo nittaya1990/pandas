@@ -1,50 +1,47 @@
+import warnings
+
 import numpy as np
 import pytest
 
 import pandas as pd
 
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", "ExtensionArray subclass", DeprecationWarning)
 
-class MyArray(pd.arrays.PandasArray):
-    _typ = "extension"
-    _allows_2d = False
+    class MyArray(pd.arrays.PandasArray):
+        _typ = "extension"
+        _allows_2d = False
 
-    def __init__(self, values, copy=False):
-        super().__init__(values, copy)
-        self._length = len(self._ndarray)
+        def __init__(self, values, copy=False):
+            super().__init__(values, copy)
+            self._length = len(self._ndarray)
 
+    class LengthArray(MyArray):
+        def __len__(self):
+            return self._length
 
-class LengthArray(MyArray):
-    def __len__(self):
-        return self._length
+    class ShapeArray(MyArray):
+        @property
+        def shape(self):
+            return (len(self),)
 
+    class SizeArray(MyArray):
+        @property
+        def size(self):
+            # This used to be correct. May not be correct now.
+            return self.shape[0]
 
-class ShapeArray(MyArray):
-    @property
-    def shape(self):
-        return (self._length,)
+    class LengthShapeArray(LengthArray, ShapeArray):
+        pass
 
+    class LengthSizeArray(LengthArray, SizeArray):
+        pass
 
-class SizeArray(MyArray):
-    @property
-    def size(self):
-        # This used to be correct. May not be correct now.
-        return self.shape[0]
+    class ShapeSizeArray(ShapeArray, SizeArray):
+        pass
 
-
-class LengthShapeArray(LengthArray, ShapeArray):
-    pass
-
-
-class LengthSizeArray(LengthArray, SizeArray):
-    pass
-
-
-class ShapeSizeArray(ShapeArray, SizeArray):
-    pass
-
-
-class LengthShapeSizeArray(LengthArray, ShapeArray, SizeArray):
-    pass
+    class LengthShapeSizeArray(LengthArray, ShapeArray, SizeArray):
+        pass
 
 
 @pytest.mark.parametrize(
