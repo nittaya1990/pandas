@@ -10,6 +10,7 @@ from pandas.core.dtypes.generic import ABCSparseDataFrame
 
 from pandas import DataFrame, Index, MultiIndex, Series
 from pandas.core import common as com
+from pandas.core._meta import finalize
 from pandas.core.arrays.categorical import (
     _factorize_from_iterable,
     _factorize_from_iterables,
@@ -28,6 +29,7 @@ from pandas.core.internals import concatenate_block_managers
 # Concatenate DataFrame objects
 
 
+@finalize(other="objs")
 def concat(
     objs,
     axis=0,
@@ -440,7 +442,7 @@ class _Concatenator:
                     [x._data for x in self.objs], self.new_axes
                 )
                 cons = _get_series_result_type(mgr, self.objs)
-                return cons(mgr, name=name).__finalize__(self, method="concat")
+                return cons(mgr, name=name)
 
             # combine as columns in a frame
             else:
@@ -450,7 +452,7 @@ class _Concatenator:
                 index, columns = self.new_axes
                 df = cons(data, index=index)
                 df.columns = columns
-                return df.__finalize__(self, method="concat")
+                return df
 
         # combine block managers
         else:
@@ -476,9 +478,7 @@ class _Concatenator:
                 new_data._consolidate_inplace()
 
             cons = _get_frame_result_type(new_data, self.objs)
-            return cons._from_axes(new_data, self.new_axes).__finalize__(
-                self, method="concat"
-            )
+            return cons._from_axes(new_data, self.new_axes)
 
     def _get_result_dim(self):
         if self._is_series and self.axis == 1:

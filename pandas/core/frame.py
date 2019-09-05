@@ -81,6 +81,7 @@ from pandas.core.dtypes.generic import (
 from pandas.core.dtypes.missing import isna, notna
 
 from pandas.core import algorithms, common as com, nanops, ops
+from pandas.core._meta import finalize
 from pandas.core.accessor import CachedAccessor
 from pandas.core.arrays import Categorical, ExtensionArray
 from pandas.core.arrays.datetimelike import DatetimeLikeArrayMixin as DatetimeLikeArray
@@ -2906,6 +2907,7 @@ class DataFrame(NDFrame):
         indexer = key.nonzero()[0]
         return self.take(indexer, axis=0)
 
+    @finalize
     def _getitem_multilevel(self, key):
         # self.columns is a MultiIndex
         loc = self.columns.get_loc(key)
@@ -2920,7 +2922,7 @@ class DataFrame(NDFrame):
                 result = self._constructor(
                     new_values, index=self.index, columns=result_columns
                 )
-                result = result.__finalize__(self)
+                result = result
 
             # If there is only one column being returned, and its name is
             # either an empty string, or a tuple with an empty string as its
@@ -4913,6 +4915,7 @@ class DataFrame(NDFrame):
     # ----------------------------------------------------------------------
     # Sorting
 
+    @finalize
     @Substitution(**_shared_doc_kwargs)
     @Appender(NDFrame.sort_values.__doc__)
     def sort_values(
@@ -4960,8 +4963,9 @@ class DataFrame(NDFrame):
         if inplace:
             return self._update_inplace(new_data)
         else:
-            return self._constructor(new_data).__finalize__(self)
+            return self._constructor(new_data)
 
+    @finalize
     @Substitution(**_shared_doc_kwargs)
     @Appender(NDFrame.sort_index.__doc__)
     def sort_index(
@@ -5038,7 +5042,7 @@ class DataFrame(NDFrame):
         if inplace:
             return self._update_inplace(new_data)
         else:
-            return self._constructor(new_data).__finalize__(self)
+            return self._constructor(new_data)
 
     def nlargest(self, n, columns, keep="first"):
         """
