@@ -3,7 +3,7 @@ from typing import Type
 
 import numpy as np
 
-from pandas._libs import lib
+from pandas._libs import lib, missing as libmissing
 
 from pandas.core.dtypes.base import ExtensionDtype
 from pandas.core.dtypes.common import is_float_dtype, pandas_dtype
@@ -16,7 +16,6 @@ from pandas.core import ops
 from pandas.core.arrays import PandasArray
 from pandas.core.construction import extract_array
 from pandas.core.missing import isna
-from pandas.core.na_scalar import NA
 
 
 @register_extension_dtype
@@ -49,7 +48,7 @@ class StringDtype(ExtensionDtype):
     """
 
     #: StringDtype.na_value uses pandas.NA
-    na_value = NA
+    na_value = libmissing.NA
 
     @property
     def type(self) -> Type:
@@ -202,13 +201,16 @@ class StringArray(PandasArray):
         # validate new items
         if scalar_value:
             if (
-                value is NA
+                value is libmissing.NA
                 or value is None
-                or is_float_dtype(value)
-                and np.isnan(value)
+                or (
+                    is_float_dtype(value)
+                    and not isinstance(value, str)
+                    and np.isnan(value)
+                )
             ):
                 value = StringDtype.na_value
-            elif not (isinstance(value, str) or (value is NA)):
+            elif not (isinstance(value, str) or (value is libmissing.NA)):
                 raise ValueError(
                     "Cannot set non-string value '{}' into a StringArray.".format(value)
                 )

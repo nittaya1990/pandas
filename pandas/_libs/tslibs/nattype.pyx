@@ -12,7 +12,6 @@ cimport numpy as cnp
 from numpy cimport int64_t
 cnp.import_array()
 
-from pandas.core.na_scalar import NA
 from pandas._libs.tslibs.np_datetime cimport (
     get_datetime64_value, get_timedelta64_value)
 cimport pandas._libs.tslibs.util as util
@@ -799,8 +798,6 @@ cpdef bint is_null_datetimelike(object val, bint inat_is_null=True):
     null_datetimelike : bool
     """
     if val is None:
-        return True
-    elif val is NA:
         return True
     elif val is c_NaT:
         return True

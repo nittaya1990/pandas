@@ -49,7 +49,6 @@ cdef extern from "src/parse_helper.h":
     int floatify(object, float64_t *result, int *maybe_int) except -1
 
 cimport pandas._libs.util as util
-from pandas.core.na_scalar import NA
 from pandas._libs.util cimport is_nan, UINT64_MAX, INT64_MAX, INT64_MIN
 
 from pandas._libs.tslib import array_to_datetime
@@ -156,7 +155,6 @@ def is_scalar(val: object) -> bool:
 
     return (cnp.PyArray_IsAnyScalar(val)
             # PyArray_IsAnyScalar is always False for bytearrays on Py3
-            or val is NA
             or PyDate_Check(val)
             or PyDelta_Check(val)
             or PyTime_Check(val)
@@ -1502,7 +1500,7 @@ cdef class Validator:
                                   f'must define is_value_typed')
 
     cdef bint is_valid_null(self, object value) except -1:
-        return value is None or value is NA or util.is_nan(value)
+        return value is None or value is C_NA or util.is_nan(value)
 
     cdef bint is_array_typed(self) except -1:
         return False

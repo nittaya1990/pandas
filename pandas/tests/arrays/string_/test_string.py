@@ -24,6 +24,15 @@ def test_setitem_validates():
         a[:] = np.array([1, 2])
 
 
+def test_setitem_with_scalar_string():
+    # is_float_dtype considers some strings, like 'd', to be floats
+    # which can cause issues.
+    arr = pd.array(["a", "c"], dtype="string")
+    arr[0] = "d"
+    expected = pd.array(["d", "c"], dtype="string")
+    tm.assert_extension_array_equal(arr, expected)
+
+
 @pytest.mark.parametrize(
     "input, method",
     [

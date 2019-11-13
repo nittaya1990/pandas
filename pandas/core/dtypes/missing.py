@@ -9,7 +9,6 @@ from pandas._libs import lib
 import pandas._libs.missing as libmissing
 from pandas._libs.tslibs import NaT, iNaT
 
-from ..na_scalar import NA
 from .common import (
     _NS_DTYPE,
     _TD_DTYPE,
@@ -441,7 +440,7 @@ def array_equivalent(left, right, strict_nan=False):
             if left_value is NaT and right_value is not NaT:
                 return False
 
-            elif left_value is NA and right_value is not NA:
+            elif left_value is libmissing.NA and right_value is not libmissing.NA:
                 return False
 
             elif isinstance(left_value, float) and np.isnan(left_value):
@@ -454,6 +453,8 @@ def array_equivalent(left, right, strict_nan=False):
                 except TypeError as err:
                     if "Cannot compare tz-naive" in str(err):
                         # tzawareness compat failure, see GH#28507
+                        return False
+                    elif "boolean value of NA is ambiguous" in str(err):
                         return False
                     raise
         return True
