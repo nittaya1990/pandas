@@ -123,6 +123,10 @@ def _map(f, arr, na_mask=False, na_value=np.nan, dtype=object):
     if na_mask:
         mask = isna(arr)
         convert = not np.all(mask)
+        if convert:
+            # NA -> nan
+            arr[mask] = np.nan
+
         try:
             result = lib.map_infer_mask(arr, f, mask.view(np.uint8), convert)
         except (TypeError, AttributeError) as e:
