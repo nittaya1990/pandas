@@ -12,7 +12,7 @@ import pandas.util.testing as tm
 def test_none_to_nan():
     a = pd.arrays.StringArray._from_sequence(["a", None, "b"])
     assert a[1] is not None
-    assert np.isnan(a[1])
+    assert a[1] is pd.NA
 
 
 def test_setitem_validates():

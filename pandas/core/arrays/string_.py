@@ -1,12 +1,12 @@
 import operator
-from typing import TYPE_CHECKING, Type
+from typing import Type
 
 import numpy as np
 
 from pandas._libs import lib
 
 from pandas.core.dtypes.base import ExtensionDtype
-from pandas.core.dtypes.common import pandas_dtype
+from pandas.core.dtypes.common import is_float_dtype, pandas_dtype
 from pandas.core.dtypes.dtypes import register_extension_dtype
 from pandas.core.dtypes.generic import ABCDataFrame, ABCIndexClass, ABCSeries
 from pandas.core.dtypes.inference import is_array_like
@@ -16,9 +16,7 @@ from pandas.core import ops
 from pandas.core.arrays import PandasArray
 from pandas.core.construction import extract_array
 from pandas.core.missing import isna
-
-if TYPE_CHECKING:
-    from pandas._typing import Scalar
+from pandas.core.na_scalar import NA
 
 
 @register_extension_dtype
@@ -50,16 +48,8 @@ class StringDtype(ExtensionDtype):
     StringDtype
     """
 
-    @property
-    def na_value(self) -> "Scalar":
-        """
-        StringDtype uses :attr:`numpy.nan` as the missing NA value.
-
-        .. warning::
-
-           `na_value` may change in a future release.
-        """
-        return np.nan
+    #: StringDtype.na_value uses pandas.NA
+    na_value = NA
 
     @property
     def type(self) -> Type:
@@ -172,10 +162,10 @@ class StringArray(PandasArray):
         if dtype:
             assert dtype == "string"
         result = super()._from_sequence(scalars, dtype=object, copy=copy)
-        # convert None to np.nan
+        # convert None to NA
         # TODO: it would be nice to do this in _validate / lib.is_string_array
         # We are already doing a scan over the values there.
-        result[result.isna()] = np.nan
+        result[result.isna()] = StringDtype.na_value
         return result
 
     @classmethod
@@ -192,6 +182,12 @@ class StringArray(PandasArray):
             type = pa.string()
         return pa.array(self._ndarray, type=type, from_pandas=True)
 
+    def _values_for_factorize(self):
+        arr = self._ndarray.copy()
+        mask = self.isna()
+        arr[mask] = -1
+        return arr, -1
+
     def __setitem__(self, key, value):
         value = extract_array(value, extract_numpy=True)
         if isinstance(value, type(self)):
@@ -205,9 +201,14 @@ class StringArray(PandasArray):
 
         # validate new items
         if scalar_value:
-            if scalar_value is None:
-                value = np.nan
-            elif not (isinstance(value, str) or np.isnan(value)):
+            if (
+                value is NA
+                or value is None
+                or is_float_dtype(value)
+                and np.isnan(value)
+            ):
+                value = StringDtype.na_value
+            elif not (isinstance(value, str) or (value is NA)):
                 raise ValueError(
                     "Cannot set non-string value '{}' into a StringArray.".format(value)
                 )
@@ -265,7 +266,7 @@ class StringArray(PandasArray):
                 other = other[valid]
 
             result = np.empty_like(self._ndarray, dtype="object")
-            result[mask] = np.nan
+            result[mask] = StringDtype.na_value
             result[valid] = op(self._ndarray[valid], other)
 
             if op.__name__ in {"add", "radd", "mul", "rmul"}:

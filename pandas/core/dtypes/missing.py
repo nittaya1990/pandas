@@ -9,6 +9,7 @@ from pandas._libs import lib
 import pandas._libs.missing as libmissing
 from pandas._libs.tslibs import NaT, iNaT
 
+from ..na_scalar import NA
 from .common import (
     _NS_DTYPE,
     _TD_DTYPE,
@@ -438,6 +439,9 @@ def array_equivalent(left, right, strict_nan=False):
 
         for left_value, right_value in zip(left, right):
             if left_value is NaT and right_value is not NaT:
+                return False
+
+            elif left_value is NA and right_value is not NA:
                 return False
 
             elif isinstance(left_value, float) and np.isnan(left_value):
