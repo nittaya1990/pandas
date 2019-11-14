@@ -6,7 +6,7 @@ import numpy as np
 from pandas._libs import lib, missing as libmissing
 
 from pandas.core.dtypes.base import ExtensionDtype
-from pandas.core.dtypes.common import is_float_dtype, pandas_dtype
+from pandas.core.dtypes.common import pandas_dtype
 from pandas.core.dtypes.dtypes import register_extension_dtype
 from pandas.core.dtypes.generic import ABCDataFrame, ABCIndexClass, ABCSeries
 from pandas.core.dtypes.inference import is_array_like
@@ -161,7 +161,7 @@ class StringArray(PandasArray):
         if dtype:
             assert dtype == "string"
         result = super()._from_sequence(scalars, dtype=object, copy=copy)
-        # convert None to NA
+        # Standardize all missing-like values to NA
         # TODO: it would be nice to do this in _validate / lib.is_string_array
         # We are already doing a scan over the values there.
         result[result.isna()] = StringDtype.na_value
@@ -200,17 +200,9 @@ class StringArray(PandasArray):
 
         # validate new items
         if scalar_value:
-            if (
-                value is libmissing.NA
-                or value is None
-                or (
-                    is_float_dtype(value)
-                    and not isinstance(value, str)
-                    and np.isnan(value)
-                )
-            ):
+            if isna(value):
                 value = StringDtype.na_value
-            elif not (isinstance(value, str) or (value is libmissing.NA)):
+            elif not isinstance(value, str):
                 raise ValueError(
                     "Cannot set non-string value '{}' into a StringArray.".format(value)
                 )
