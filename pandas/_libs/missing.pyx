@@ -346,6 +346,12 @@ class NAType(C_NAType):
     def __hash__(self):
         return id(self)
 
+    def __float__(self):
+        raise ValueError("cannot convert pandas.NA to float")
+
+    def __int__(self):
+        raise ValueError("cannot convert pandas.NA to integer")
+
     # Binary arithmetic and comparison ops -> propagate
 
     __add__ = _create_binary_propagating_op("__add__")

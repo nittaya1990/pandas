@@ -1,10 +1,10 @@
 import numbers
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Any, Tuple, Type
 import warnings
 
 import numpy as np
 
-from pandas._libs import lib
+from pandas._libs import lib, missing as libmissing
 from pandas.compat import set_function_name
 
 from pandas.core.dtypes.base import ExtensionDtype
@@ -67,7 +67,7 @@ class BooleanDtype(ExtensionDtype):
 
            `na_value` may change in a future release.
         """
-        return np.nan
+        return libmissing.NA
 
     @property
     def type(self) -> Type:
@@ -281,6 +281,11 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
             return self._data[item]
         return type(self)(self._data[item], self._mask[item])
 
+    def _coerce_to_float(self, dtype="float"):
+        values = self._data.astype(dtype)
+        values[self._mask] = np.nan
+        return values
+
     def _coerce_to_ndarray(self, force_bool: bool = False):
         """
         Coerce to an ndarary of object dtype or bool dtype (if force_bool=True).
@@ -474,7 +479,7 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
         if is_bool_dtype(dtype):
             # astype_nansafe converts np.nan to True
             if self.isna().any():
-                raise ValueError("cannot convert float NaN to bool")
+                raise ValueError("boolean value of NA is ambiguous")
             else:
                 return self._data.astype(dtype, copy=copy)
         if is_extension_array_dtype(dtype) and is_integer_dtype(dtype):
@@ -532,6 +537,11 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
             )
 
         return Series(array, index=index)
+
+    def _values_for_factorize(self) -> Tuple[np.ndarray, Any]:
+        data = self._data.astype("int")
+        data[self._mask] = -1
+        return data, -1
 
     def _values_for_argsort(self) -> np.ndarray:
         """
@@ -643,7 +653,7 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
         # coerce to a nan-aware float if needed
         if mask.any():
             data = self._data.astype("float64")
-            data[mask] = self._na_value
+            data[mask] = np.nan
 
         op = getattr(nanops, "nan" + name)
         result = op(data, axis=0, skipna=skipna, mask=mask, **kwargs)

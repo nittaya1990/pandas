@@ -98,6 +98,11 @@ def test_to_boolean_array_all_none():
     tm.assert_extension_array_equal(result, expected)
 
 
+def test_uses_na():
+    a = pd.array([True, None], dtype="boolean")
+    assert a[1] is pd.NA
+
+
 @pytest.mark.parametrize(
     "a, b",
     [
@@ -107,7 +112,7 @@ def test_to_boolean_array_all_none():
         ([np.nan, np.nan], [np.nan, np.nan]),
     ],
 )
-def test_to_boolean_array_none_is_nan(a, b):
+def test_to_boolean_array_none_is_na(a, b):
     result = pd.array(a, dtype="boolean")
     expected = pd.array(b, dtype="boolean")
     tm.assert_extension_array_equal(result, expected)
@@ -214,9 +219,9 @@ def test_coerce_to_array_from_boolean_array():
 
 def test_coerce_to_numpy_array():
     # with missing values -> object dtype
-    arr = pd.array([True, False, None], dtype="boolean")
+    arr = pd.array([True, False, pd.NA], dtype="boolean")
     result = np.array(arr)
-    expected = np.array([True, False, None], dtype="object")
+    expected = np.array([True, False, pd.NA], dtype="object")
     tm.assert_numpy_array_equal(result, expected)
 
     # also with no missing values -> object dtype
@@ -238,17 +243,16 @@ def test_coerce_to_numpy_array():
 def test_astype():
     # with missing values
     arr = pd.array([True, False, None], dtype="boolean")
-    msg = "cannot convert float NaN to"
+    msg = "cannot convert pandas.NA to"
 
     with pytest.raises(ValueError, match=msg):
         arr.astype("int64")
 
     with pytest.raises(ValueError, match=msg):
-        arr.astype("bool")
+        arr.astype("float64")
 
-    result = arr.astype("float64")
-    expected = np.array([1, 0, np.nan], dtype="float64")
-    tm.assert_numpy_array_equal(result, expected)
+    with pytest.raises(ValueError, match="boolean value of NA"):
+        arr.astype("bool")
 
     # no missing values
     arr = pd.array([True, False, True], dtype="boolean")
