@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 
-from pandas._libs import lib
+from pandas._libs import lib, missing as libmissing
 from pandas.compat import set_function_name
 
 from pandas.core.dtypes.base import ExtensionDtype
@@ -560,10 +560,12 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
                 return NotImplemented
 
             other = lib.item_from_zerodim(other)
-            mask = None
+            omask = mask = None
+            other_is_booleanarray = isinstance(other, BooleanArray)
 
-            if isinstance(other, BooleanArray):
-                other, mask = other._data, other._mask
+            if other_is_booleanarray:
+                other, omask = other._data, other._mask
+                mask = omask
             elif is_list_like(other):
                 other = np.asarray(other, dtype="bool")
                 if other.ndim > 1:
@@ -576,16 +578,35 @@ class BooleanArray(ExtensionArray, ExtensionOpsMixin):
 
             # numpy will show a DeprecationWarning on invalid elementwise
             # comparisons, this will raise in the future
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", "elementwise", FutureWarning)
-                with np.errstate(all="ignore"):
-                    result = op(self._data, other)
+            if other is libmissing.NA:
+                result = self._data
+                mask = True
+            else:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", "elementwise", FutureWarning)
+                    with np.errstate(all="ignore"):
+                        result = op(self._data, other)
 
             # nans propagate
             if mask is None:
                 mask = self._mask
             else:
                 mask = self._mask | mask
+
+            # Kleene-logic adjustments to the mask.
+            if op.__name__ in {"or_", "ror_"}:
+                mask[result] = False
+            elif op.__name__ in {"and_", "rand_"}:
+                mask[~self._data & ~self._mask] = False
+                if other_is_booleanarray:
+                    mask[~other & ~omask] = False
+                elif other is libmissing.NA:
+                    mask[:] = True
+                # Do we ever assume that masked values are False?
+                result[mask] = False
+            elif op.__name__ in {"xor", "rxor"}:
+                # Do we ever assume that masked values are False?
+                result[mask] = False
 
             return BooleanArray(result, mask)
 
