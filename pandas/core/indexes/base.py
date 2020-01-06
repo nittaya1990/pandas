@@ -4204,7 +4204,7 @@ class Index(IndexOpsMixin, PandasObject):
             Should the indices that would sort the index be returned.
         ascending : bool, default True
             Should the index values be sorted in an ascending order.
-        key : Callable, default None
+        key : callable, default None
             Apply a key function to the indices before sorting, like
             built-in sorted function.
 

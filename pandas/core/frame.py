@@ -4870,11 +4870,6 @@ class DataFrame(NDFrame):
         ignore_index=False,
         key: Optional[Callable] = None,
     ):
-        if key is not None:
-            raise NotImplementedError(
-                "Key sorting for DataFrame::sort_values has not been implemented"
-            )
-
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
 
@@ -4885,6 +4880,12 @@ class DataFrame(NDFrame):
                 f"Length of ascending ({len(ascending)}) != length of by ({len(by)})"
             )
         if len(by) > 1:
+            if key is not None:
+                raise NotImplementedError(
+                    "Key sorting for DataFrame.sort_values on multiple \
+                            columns has not been implemented."
+                )
+
             from pandas.core.sorting import lexsort_indexer
 
             keys = [self._get_label_or_level_values(x, axis=axis) for x in by]

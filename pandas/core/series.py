@@ -2794,7 +2794,7 @@ Name: Max Speed, dtype: float64
 
              .. versionadded:: 1.0.0
 
-        key : Callable, default None
+        key : callable, default None
             If not None, apply the key function to every element before
             sorting. Identical to key argument in built-in sorted function.
 
@@ -3011,7 +3011,7 @@ Name: Max Speed, dtype: float64
 
             .. versionadded:: 1.0.0
 
-        key : Callable, default None
+        key : callable, default None
             If not None, apply the key function to every index element before
             sorting. Identical to key argument in built-in sorted function.
 
@@ -3099,7 +3099,7 @@ Name: Max Speed, dtype: float64
         bar  two    7
         dtype: int64
 
-        >>> s = Series([1, 2, 3, 4, 5, 6, 7, 8])
+        >>> s = pd.Series([1, 2, 3, 4, 5, 6, 7, 8])
         >>> s.sort_index(key=lambda x : -x)
         7    8
         6    7

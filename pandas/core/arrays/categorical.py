@@ -1571,7 +1571,7 @@ class Categorical(ExtensionArray, PandasObject):
         na_position : {'first', 'last'} (optional, default='last')
             'first' puts NaNs at the beginning
             'last' puts NaNs at the end
-        key : Callable, default None
+        key : callable, default None
             If not None, apply the key function to every value before
             sorting. Identical to key argument in built-in sorted function.
 

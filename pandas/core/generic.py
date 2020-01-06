@@ -4123,9 +4123,10 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
              .. versionadded:: 1.0.0
 
-        key : Callable, default None
+        key : callable, default None
              If not None, apply the key function to every element before
              sorting. Identical to key argument in built-in sorted function.
+             Currently only implemented for Series.sort_values.
 
              .. versionadded:: 1.0.0
 
@@ -4239,7 +4240,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
             .. versionadded:: 1.0.0
 
-        key : Callable, default None
+        key : callable, default None
             If not None, apply the key function to every index element before
             sorting. Identical to key argument in built-in sorted function.
 
