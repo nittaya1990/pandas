@@ -39,7 +39,7 @@ See the :ref:`overview` for more detail about what's in the library.
     :hidden:
 {% endif %}
 {% if not single_doc %}
-    What's New in 1.0.0 <whatsnew/v1.0.0>
+    What's New <whatsnew/v1.0.0>
     getting_started/index
     user_guide/index
     {% endif -%}
