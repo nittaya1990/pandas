@@ -2792,7 +2792,7 @@ Name: Max Speed, dtype: float64
             Argument 'first' puts NaNs at the beginning, 'last' puts NaNs at
             the end.
         ignore_index : bool, default False
-             If True, the resulting axis will be labeled 0, 1, …, n - 1.
+            If True, the resulting axis will be labeled 0, 1, …, n - 1.
 
             .. versionadded:: 1.0.0
 
@@ -2899,7 +2899,7 @@ Name: Max Speed, dtype: float64
         2    c
         4    e
         dtype: object
-        >>> s.sort_values(key=pd.Series.str.lower)
+        >>> s.sort_values(key=lambda x: x.str.lower())
         0    a
         1    B
         2    c
@@ -2912,11 +2912,11 @@ Name: Max Speed, dtype: float64
 
         >>> s = pd.Series([-4, -2, 0, 2, 4])
         >>> s.sort_values(key=np.sin)
-        3    2
-        0   -4
-        2    0
-        4    4
         1   -2
+        4    4
+        2    0
+        0   -4
+        3    2
         dtype: int64
 
         More complicated user-defined functions can be used,
