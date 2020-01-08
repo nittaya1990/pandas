@@ -4157,12 +4157,15 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
             .. versionadded:: 1.0.0
 
-
-
         Returns
         -------
-        sorted_obj : DataFrame or None
+        DataFrame or None
             DataFrame with sorted values if inplace=False, None otherwise.
+
+        See Also
+        --------
+        DataFrame.sort_index : Sort a DataFrame by the index.
+        Series.sort_values : Similar method for a Series.
 
         Examples
         --------
