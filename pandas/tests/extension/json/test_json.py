@@ -210,8 +210,12 @@ class TestMethods(BaseJSON, base.BaseMethodsTests):
         super().test_sort_values(data_for_sorting, ascending, sort_by_key)
 
     @pytest.mark.parametrize("ascending", [True, False])
-    def test_sort_values_missing(self, data_missing_for_sorting, ascending, sort_by_key):
-        super().test_sort_values_missing(data_missing_for_sorting, ascending, sort_by_key)
+    def test_sort_values_missing(
+        self, data_missing_for_sorting, ascending, sort_by_key
+    ):
+        super().test_sort_values_missing(
+            data_missing_for_sorting, ascending, sort_by_key
+        )
 
     @pytest.mark.skip(reason="combine for JSONArray not supported")
     def test_combine_le(self, data_repeated):
