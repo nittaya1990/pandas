@@ -327,7 +327,7 @@ class TestDataFrameSortIndexKey:
             {"a": [3, 1, 2], "b": [0, 0, 0], "c": [0, 1, 2], "d": list("abc")}
         )
         result = df.set_index(list("abc")).sort_index(
-            level=list("ba"), key=lambda x: x[0]
+            level=list("ba"), key=lambda x: x.get_level_values(0)
         )
 
         expected = DataFrame(
@@ -337,7 +337,7 @@ class TestDataFrameSortIndexKey:
         tm.assert_frame_equal(result, expected)
 
         result = df.set_index(list("abc")).sort_index(
-            level=list("ba"), key=lambda x: x[2]
+            level=list("ba"), key=lambda x: x.get_level_values(2)
         )
 
         expected = df.set_index(list("abc"))
@@ -350,11 +350,11 @@ class TestDataFrameSortIndexKey:
         expected = df.iloc[[2, 3, 0, 1, 5, 4]]
         tm.assert_frame_equal(result, expected)
 
-        result = df.sort_index(key=str.lower)
+        result = df.sort_index(key=lambda x: x.str.lower())
         expected = df.iloc[[0, 1, 5, 2, 3, 4]]
         tm.assert_frame_equal(result, expected)
 
-        result = df.sort_index(key=str.lower, ascending=False)
+        result = df.sort_index(key=lambda x: x.str.lower(), ascending=False)
         expected = df.iloc[[4, 2, 3, 0, 1, 5]]
         tm.assert_frame_equal(result, expected)
 

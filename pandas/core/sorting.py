@@ -12,7 +12,6 @@ from pandas.core.dtypes.common import (
     is_categorical_dtype,
     is_extension_array_dtype,
 )
-from pandas.core.dtypes.generic import ABCIndexClass
 from pandas.core.dtypes.missing import isna
 
 import pandas.core.algorithms as algorithms
@@ -267,6 +266,7 @@ def nargsort(
     ascending: bool = True,
     na_position: str = "last",
     key: Optional[Callable] = None,
+    raw: bool = True,
 ):
     """
     Intended to be a drop-in replacement for np.argsort which handles NaNs.
@@ -282,12 +282,14 @@ def nargsort(
     na_position : {'first', 'last'}, default 'last'
     key : Optional[Callable], default None
     """
-    items = extract_array(items)
+    if raw:
+        items = extract_array(items)
+
     mask = np.asarray(isna(items))
 
-    if is_extension_array_dtype(items):
+    if raw and is_extension_array_dtype(items):
         items = items._values_for_argsort()
-    else:
+    elif raw:
         items = np.asanyarray(items)
 
     if key is not None:
@@ -332,12 +334,12 @@ def ensure_key_mapped(values, key: Optional[Callable]):
     if not key:
         return values
 
-    if isinstance(values, ABCIndexClass):
-        return values.map(key, na_action="ignore")
-    elif isinstance(values, np.ndarray):
-        return lib.map_infer_mask(values, key, isna(values).view(np.uint8))
-    else:
-        raise TypeError(f"Could not map key to object of type {type(values)}")
+    result = key(values)
+    if len(result) != len(values):
+        raise ValueError(
+            "User-provided `key` function much not change the shape of the array."
+        )
+    return result
 
 
 class _KeyMapper:

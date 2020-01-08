@@ -191,7 +191,8 @@ class TestSeriesSortingKey:
         expected = series
         tm.assert_series_equal(result, expected)
 
-        result = series.sort_values(0, key=str.lower)
+        # TODO: let key=Series.str.upper work
+        result = series.sort_values(0, key=lambda x: x.str.lower())
         expected = series[::-1]
         tm.assert_series_equal(result, expected)
 

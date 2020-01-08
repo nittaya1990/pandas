@@ -39,7 +39,7 @@ import numpy.ma as ma
 from pandas._config import get_option
 
 from pandas._libs import algos as libalgos, lib
-from pandas._typing import Axes, Dtype, FilePathOrBuffer
+from pandas._typing import AnyArrayLike, Axes, Dtype, FilePathOrBuffer
 from pandas.compat import PY37
 from pandas.compat._optional import import_optional_dependency
 from pandas.compat.numpy import function as nv
@@ -4863,6 +4863,7 @@ class DataFrame(NDFrame):
 
     # ----------------------------------------------------------------------
     # Sorting
+    # TODO: Just move the sort_values doc here.
     @Substitution(**_shared_doc_kwargs)
     @Appender(NDFrame.sort_values.__doc__)
     def sort_values(  # type: ignore[override] # NOQA
@@ -4874,7 +4875,7 @@ class DataFrame(NDFrame):
         kind="quicksort",
         na_position="last",
         ignore_index=False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[["DataFrame"], Union["DataFrame", AnyArrayLike]]] = None,
     ):
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
@@ -4885,16 +4886,11 @@ class DataFrame(NDFrame):
             raise ValueError(
                 f"Length of ascending ({len(ascending)}) != length of by ({len(by)})"
             )
+        raw = key is None
         if len(by) > 1:
-            if key is not None:
-                raise NotImplementedError(
-                    "Key sorting for DataFrame.sort_values on multiple \
-                            columns has not been implemented."
-                )
-
             from pandas.core.sorting import lexsort_indexer
 
-            keys = [self._get_label_or_level_values(x, axis=axis) for x in by]
+            keys = [self._get_label_or_level_values(x, axis=axis, raw=raw) for x in by]
             indexer = lexsort_indexer(
                 keys, orders=ascending, na_position=na_position, key=key
             )
@@ -4903,13 +4899,18 @@ class DataFrame(NDFrame):
             from pandas.core.sorting import nargsort
 
             by = by[0]
-            k = self._get_label_or_level_values(by, axis=axis)
+            k = self._get_label_or_level_values(by, axis=axis, raw=raw)
 
             if isinstance(ascending, (tuple, list)):
                 ascending = ascending[0]
 
             indexer = nargsort(
-                k, kind=kind, ascending=ascending, na_position=na_position, key=key
+                k,
+                kind=kind,
+                ascending=ascending,
+                na_position=na_position,
+                key=key,
+                raw=raw,
             )
 
         new_data = self._data.take(
@@ -4936,7 +4937,7 @@ class DataFrame(NDFrame):
         na_position="last",
         sort_remaining=True,
         ignore_index: bool = False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[[Index], Index]] = None,
     ):
 
         # TODO: this can be combined with Series.sort_index impl as

@@ -538,7 +538,6 @@ class TestDataFrameSortValues:
 
 
 class TestDataFrameSortKey:  # test key sorting (issue 27237), not yet implemented
-    @pytest.mark.xfail(strict=False)
     def test_sort_values_inplace_key(self, sort_by_key):
         frame = DataFrame(
             np.random.randn(4, 4), index=[1, 2, 3, 4], columns=["A", "B", "C", "D"]
@@ -581,7 +580,6 @@ class TestDataFrameSortKey:  # test key sorting (issue 27237), not yet implement
         expected = df.iloc[[0, 4, 3, 1, 2, 5]]
         tm.assert_frame_equal(result, expected)
 
-    @pytest.mark.xfail
     def test_sort_values_by_key(self):
         df = DataFrame(
             {
@@ -602,7 +600,6 @@ class TestDataFrameSortKey:  # test key sorting (issue 27237), not yet implement
         expected = df.iloc[[0, 4, 1, 3, 2, 5]]
         tm.assert_frame_equal(result, expected)
 
-    @pytest.mark.xfail
     def test_sort_values_key_nan(self):
         df = DataFrame(np.array([["hello", "goodbye"], ["hello", "Hello"]]))
 
@@ -610,11 +607,13 @@ class TestDataFrameSortKey:  # test key sorting (issue 27237), not yet implement
         expected = df[::-1]
         tm.assert_frame_equal(result, expected)
 
-        result = df.sort_values([0, 1], key=str.lower)
+        result = df.sort_values([0, 1], key=lambda col: col.str.lower())
         tm.assert_frame_equal(result, df)
 
-        result = df.sort_values([0, 1], key=str.lower, ascending=False)
-        expected = df.sort_values(1, key=str.lower, ascending=False)
+        result = df.sort_values(
+            [0, 1], key=lambda col: col.str.lower(), ascending=False
+        )
+        expected = df.sort_values(1, key=lambda col: col.str.lower(), ascending=False)
         tm.assert_frame_equal(result, expected)
 
     def test_sort_values_key_empty(self, sort_by_key):

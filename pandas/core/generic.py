@@ -30,7 +30,13 @@ import numpy as np
 from pandas._config import config
 
 from pandas._libs import Timestamp, iNaT, lib, properties
-from pandas._typing import Dtype, FilePathOrBuffer, FrameOrSeries, JSONSerializable
+from pandas._typing import (
+    AnyArrayLike,
+    Dtype,
+    FilePathOrBuffer,
+    FrameOrSeries,
+    JSONSerializable,
+)
 from pandas.compat import set_function_name
 from pandas.compat._optional import import_optional_dependency
 from pandas.compat.numpy import function as nv
@@ -1624,7 +1630,9 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             )
             raise ValueError(msg)
 
-    def _get_label_or_level_values(self, key: str, axis: int = 0) -> np.ndarray:
+    def _get_label_or_level_values(
+        self, key: str, axis: int = 0, raw: bool_t = True
+    ) -> np.ndarray:
         """
         Return a 1-D array of values associated with `key`, a label or level
         from the given `axis`.
@@ -1643,6 +1651,8 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             Label or level name.
         axis: int, default 0
             Axis that levels are associated with (0 for index, 1 for columns)
+        raw : bool, default True
+            Whether to unbox the array from the Series
 
         Returns
         -------
@@ -1663,7 +1673,9 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
         if self._is_label_reference(key, axis=axis):
             self._check_label_or_level_ambiguity(key, axis=axis)
-            values = self.xs(key, axis=other_axes[0])._values
+            values = self.xs(key, axis=other_axes[0])
+            if raw:
+                values = values._values
         elif self._is_level_reference(key, axis=axis):
             values = self.axes[axis].get_level_values(key)._values
         else:
@@ -4107,7 +4119,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         kind: str = "quicksort",
         na_position: str = "last",
         ignore_index: bool_t = False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[[Union[Index, FrameOrSeries]], AnyArrayLike]] = None,
     ):
         """
         Sort by the values along either axis.
@@ -4135,12 +4147,17 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
              .. versionadded:: 1.0.0
 
-        key : callable, default None
-             If not None, apply the key function to every element before
-             sorting. Identical to key argument in built-in sorted function.
-             Currently only implemented for Series.sort_values.
+        key : callable, optional
+            Apply the key function to the values
+            before sorting. This is similar to the `key` argument in the
+            builtin :meth:`sorted` function, with the notable difference that
+            this `key` function should be *vectorized*. It should expect a
+            ``DataFrame`` and return a DataFrame or array-like with the same
+            shape as the input.
 
-             .. versionadded:: 1.0.0
+            .. versionadded:: 1.0.0
+
+
 
         Returns
         -------
@@ -4220,7 +4237,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         na_position: str = "last",
         sort_remaining: bool_t = True,
         ignore_index: bool_t = False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[[Index], Index]] = None,
     ):
         """
         Sort object by labels (along an axis).

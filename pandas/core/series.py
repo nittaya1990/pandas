@@ -12,6 +12,7 @@ import numpy as np
 from pandas._config import get_option
 
 from pandas._libs import index as libindex, lib, reshape, tslibs
+from pandas._typing import AnyArrayLike
 from pandas.compat.numpy import function as nv
 from pandas.util._decorators import Appender, Substitution
 from pandas.util._validators import validate_bool_kwarg, validate_percentile
@@ -2767,7 +2768,7 @@ Name: Max Speed, dtype: float64
         kind="quicksort",
         na_position="last",
         ignore_index=False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[["Series"], AnyArrayLike]] = None,
     ):
         """
         Sort by the values.
@@ -2795,9 +2796,13 @@ Name: Max Speed, dtype: float64
 
              .. versionadded:: 1.0.0
 
-        key : callable, default None
-            If not None, apply the key function to every element before
-            sorting. Identical to key argument in built-in sorted function.
+        key : callable, optional
+            If not None, apply the key function to the **no-missing** values
+            before sorting. This is similar to the `key` argument in the
+            builtin :meth:`sorted` function, with the notable difference that
+            this `key` function should be *vectorized*. It should expect a
+            ``Series`` or ``Index`` and return an array-like that implements
+            ``argsort``.
 
             .. versionadded:: 1.0.0
 
@@ -2883,7 +2888,8 @@ Name: Max Speed, dtype: float64
         0    z
         dtype: object
 
-        Sort using a key function
+        Sort using a key function. Your `key` function will be
+        given the ``Series`` of values and should return an array-like.
 
         >>> s = pd.Series(['a', 'B', 'c', 'D', 'e'])
         >>> s.sort_values()
@@ -2893,13 +2899,36 @@ Name: Max Speed, dtype: float64
         2    c
         4    e
         dtype: object
-        >>> s.sort_values(key=str.lower)
+        >>> s.sort_values(key=pd.Series.str.lower)
         0    a
         1    B
         2    c
         3    D
         4    e
         dtype: object
+
+        NumPy ufuncs work well here. For example, we can
+        sort by the ``sin`` of the value
+
+        >>> s = pd.Series([-4, -2, 0, 2, 4])
+        >>> s.sort_values(key=np.sin)
+        3    2
+        0   -4
+        2    0
+        4    4
+        1   -2
+        dtype: int64
+
+        More complicated user-defined functions can be used,
+        as long as they expect a Series and return an array-like
+
+        >>> s.sort_values(key=lambda x: (np.tan(x.cumsum())))
+        0   -4
+        3    2
+        4    4
+        1   -2
+        2    0
+        dtype: int64
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Validate the axis parameter
@@ -2932,7 +2961,7 @@ Name: Max Speed, dtype: float64
         good = ~bad
         idx = ibase.default_index(len(self))
 
-        argsorted = _try_kind_sort(arr[good])
+        argsorted = _try_kind_sort(self[good])
 
         if is_list_like(ascending):
             if len(ascending) != 1:
@@ -2978,7 +3007,7 @@ Name: Max Speed, dtype: float64
         na_position="last",
         sort_remaining=True,
         ignore_index: bool = False,
-        key: Optional[Callable] = None,
+        key: Optional[Callable[[Index], Index]] = None,
     ):
         """
         Sort Series by index labels.
@@ -3012,9 +3041,13 @@ Name: Max Speed, dtype: float64
 
             .. versionadded:: 1.0.0
 
-        key : callable, default None
-            If not None, apply the key function to every index element before
-            sorting. Identical to key argument in built-in sorted function.
+        key : callable, optional
+            If not None, apply the key function to the **non-missing** values
+            before sorting. This is similar to the `key` argument in the
+            builtin :meth:`sorted` function, with the notable difference that
+            this `key` function should be *vectorized*. It should expect a
+            ``Series`` or ``Index`` and return an array-like that implements
+            ``argsort``.
 
             .. versionadded:: 1.0.0
 
@@ -3118,6 +3151,7 @@ Name: Max Speed, dtype: float64
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Validate the axis parameter
         self._get_axis_number(axis)
+        # TODO: should ensure_key_mapped convert to an array?
         index = ensure_key_mapped(self.index, key)
 
         if level is not None:
