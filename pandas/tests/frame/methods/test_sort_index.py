@@ -327,7 +327,9 @@ class TestDataFrameSortIndexKey:
             {"a": [3, 1, 2], "b": [0, 0, 0], "c": [0, 1, 2], "d": list("abc")}
         )
 
-        result = df.set_index(list("abc")).sort_index(level=list("ba"), key=lambda x: x[0])
+        result = df.set_index(list("abc")).sort_index(
+            level=list("ba"), key=lambda x: x[0]
+        )
 
         expected = DataFrame(
             {"a": [1, 2, 3], "b": [0, 0, 0], "c": [1, 2, 0], "d": list("bca")}
