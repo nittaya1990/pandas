@@ -2793,7 +2793,7 @@ Name: Max Speed, dtype: float64
         ignore_index : bool, default False
              If True, the resulting axis will be labeled 0, 1, …, n - 1.
 
-             .. versionadded:: 1.0.0
+            .. versionadded:: 1.0.0
 
         key : callable, default None
             If not None, apply the key function to every element before
