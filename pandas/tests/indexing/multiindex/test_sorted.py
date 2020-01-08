@@ -65,7 +65,9 @@ class TestMultiIndexSorted:
         ]
         tuples = zip(*arrays)
         index = MultiIndex.from_tuples(tuples)
-        index = index.sort_values(key=lambda x: (x[0][2], x[1][2]))
+        index = index.sort_values(
+            key=lambda x: x.map(lambda row: (row[0][2], row[1][2]))
+        )
         result = DataFrame(range(8), index=index)
 
         arrays = [
