@@ -2943,6 +2943,7 @@ Name: Max Speed, dtype: float64
 
         def _try_kind_sort(arr):
             arr = ensure_key_mapped(arr, key)
+            arr = getattr(arr, "_values", arr)
 
             # easier to ask forgiveness than permission
             try:
