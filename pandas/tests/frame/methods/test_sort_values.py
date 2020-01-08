@@ -621,3 +621,8 @@ class TestDataFrameSortKey:  # test key sorting (issue 27237), not yet implement
 
         df.sort_values(0, key=sort_by_key)
         df.sort_index(key=sort_by_key)
+
+    def test_changes_length_raises(self):
+        df = pd.DataFrame({"A": [1, 2, 3]})
+        with pytest.raises(ValueError, match="change the shape"):
+            df.sort_values("A", key=lambda x: x[:1])

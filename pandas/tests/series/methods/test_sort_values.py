@@ -250,3 +250,8 @@ class TestSeriesSortingKey:
 
         index_sorted_series = series.sort_index(na_position="last", key=sort_by_key)
         tm.assert_series_equal(expected_series_last, index_sorted_series)
+
+    def test_changes_length_raises(self):
+        s = Series([1, 2, 3])
+        with pytest.raises(ValueError, match="change the shape"):
+            s.sort_values(key=lambda x: x[:1])

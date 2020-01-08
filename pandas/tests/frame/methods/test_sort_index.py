@@ -371,3 +371,8 @@ class TestDataFrameSortIndexKey:
 
         result = df.sort_index(key=lambda x: 2 * x)
         tm.assert_frame_equal(result, df)
+
+    def test_changes_length_raises(self):
+        df = pd.DataFrame({"A": [1, 2, 3]})
+        with pytest.raises(ValueError, match="change the shape"):
+            df.sort_index(key=lambda x: x[:1])

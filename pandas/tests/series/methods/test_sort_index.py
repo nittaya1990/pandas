@@ -207,3 +207,8 @@ class TestSeriesSortIndexKey:
 
         result = series.sort_index(key=lambda x: 2 * x)
         tm.assert_series_equal(result, series)
+
+    def test_changes_length_raises(self):
+        s = Series([1, 2, 3])
+        with pytest.raises(ValueError, match="change the shape"):
+            s.sort_index(key=lambda x: x[:1])

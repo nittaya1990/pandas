@@ -184,7 +184,7 @@ to the values to determine the sort ordering.
 
    s = pd.Series(['C', 'a', 'B'])
    s.sort_values()
-   s.sort_values(key=lambda x: x.str.lower)
+   s.sort_values(key=lambda x: x.str.lower())
 
 For more details, see examples and documentation in :meth:`DataFrame.sort_values`,
 :meth:`Series.sort_values`, and :meth:`~DataFrame.sort_index`.

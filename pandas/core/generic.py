@@ -4152,8 +4152,8 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             before sorting. This is similar to the `key` argument in the
             builtin :meth:`sorted` function, with the notable difference that
             this `key` function should be *vectorized*. It should expect a
-            ``DataFrame`` and return a DataFrame or array-like with the same
-            shape as the input.
+            ``Series`` and return a Series with the same shape as the input.
+            It will be applied to each column in `by` independently.
 
             .. versionadded:: 1.0.0
 
