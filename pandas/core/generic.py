@@ -107,10 +107,6 @@ _shared_doc_kwargs = dict(
             Name or list of names to sort by""",
 )
 
-# sentinel value to use as kwarg in place of None when None has special meaning
-# and needs to be distinguished from a user explicitly passing None.
-sentinel = object()
-
 
 def _single_replace(self, to_replace, method, inplace, limit):
     """
@@ -236,6 +232,10 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
     def attrs(self) -> Dict[Optional[Hashable], Any]:
         """
         Dictionary of global attributes on this object.
+
+        .. warning::
+
+           attrs is experimental and may change without warning.
         """
         if self._attrs is None:
             self._attrs = {}
@@ -1087,7 +1087,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             return result.__finalize__(self)
 
     @rewrite_axis_style_signature("mapper", [("copy", True), ("inplace", False)])
-    def rename_axis(self, mapper=sentinel, **kwargs):
+    def rename_axis(self, mapper=lib.no_default, **kwargs):
         """
         Set the name of the axis for the index or columns.
 
@@ -1212,7 +1212,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
                monkey         2         2
         """
         axes, kwargs = self._construct_axes_from_arguments(
-            (), kwargs, sentinel=sentinel
+            (), kwargs, sentinel=lib.no_default
         )
         copy = kwargs.pop("copy", True)
         inplace = kwargs.pop("inplace", False)
@@ -1228,7 +1228,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if mapper is not sentinel:
+        if mapper is not lib.no_default:
             # Use v0.23 behavior if a scalar or list
             non_mapper = is_scalar(mapper) or (
                 is_list_like(mapper) and not is_dict_like(mapper)
@@ -1244,7 +1244,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
 
             for axis in range(self._AXIS_LEN):
                 v = axes.get(self._AXIS_NAMES[axis])
-                if v is sentinel:
+                if v is lib.no_default:
                     continue
                 non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
                 if non_mapper:
@@ -6458,8 +6458,8 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             if not is_dict_like(to_replace):
                 if not is_dict_like(regex):
                     raise TypeError(
-                        'If "to_replace" and "value" are both None'
-                        ' and "to_replace" is not a list, then '
+                        'If "to_replace" and "value" are both None '
+                        'and "to_replace" is not a list, then '
                         "regex must be a mapping"
                     )
                 to_replace = regex
@@ -6473,9 +6473,8 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             if any(are_mappings):
                 if not all(are_mappings):
                     raise TypeError(
-                        "If a nested mapping is passed, all values"
-                        " of the top level mapping must be "
-                        "mappings"
+                        "If a nested mapping is passed, all values "
+                        "of the top level mapping must be mappings"
                     )
                 # passed a nested dict/Series
                 to_rep_dict = {}
@@ -6995,8 +6994,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         if not is_list:
             start = self.index[0]
             if isinstance(self.index, PeriodIndex):
-                where = Period(where, freq=self.index.freq).ordinal
-                start = start.ordinal
+                where = Period(where, freq=self.index.freq)
 
             if where < start:
                 if not is_series:
