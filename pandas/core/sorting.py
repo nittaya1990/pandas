@@ -332,10 +332,14 @@ def ensure_key_mapped(values, key: Optional[Callable]):
     if not key:
         return values
 
+    from pandas.core.arrays import ExtensionArray
+
     if isinstance(values, ABCIndexClass):
         return values.map(key, na_action="ignore")
     elif isinstance(values, np.ndarray):
         return lib.map_infer_mask(values, key, isna(values).view(np.uint8))
+    elif isinstance(values, ExtensionArray):
+        return ensure_key_mapped(values._values_for_argsort(), key)
     else:
         raise TypeError(f"Could not map key to object of type {type(values)}")
 

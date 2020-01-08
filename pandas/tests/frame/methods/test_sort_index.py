@@ -325,8 +325,9 @@ class TestDataFrameSortIndexKey:
         # GH 25775, testing that sorting by index works with a multi-index.
         df = DataFrame(
             {"a": [3, 1, 2], "b": [0, 0, 0], "c": [0, 1, 2], "d": list("abc")}
-        )
-        result = df.set_index(list("abc")).sort_index(
+        ).set_index(list("abc"))
+        
+        result = df.sort_index(
             level=list("ba"), key=lambda x: x[0]
         )
 
