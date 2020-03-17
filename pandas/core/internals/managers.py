@@ -1696,7 +1696,7 @@ def create_block_manager_from_arrays(arrays, names, axes):
     try:
         blocks = form_blocks(arrays, names, axes)
         mgr = BlockManager(blocks, axes)
-        mgr._consolidate_inplace()
+        # mgr._consolidate_inplace()
         return mgr
     except ValueError as e:
         construction_error(len(arrays), arrays[0].shape, axes, e)
@@ -1839,14 +1839,13 @@ def _simple_blockify(tuples, dtype):
 def _multi_blockify(tuples, dtype=None):
     """ return an array of blocks that potentially have different dtypes """
     # group by dtype
-    grouper = itertools.groupby(tuples, lambda x: x[2].dtype)
+    # grouper = itertools.groupby(tuples, lambda x: x[2].dtype)
 
     new_blocks = []
-    for dtype, tup_block in grouper:
-
-        values, placement = _stack_arrays(list(tup_block), dtype)
-
-        block = make_block(values, placement=placement)
+    # for dtype, tup_block in grouper:
+    for placement, _, values in tuples:
+        values = np.atleast_2d(values)
+        block = make_block(values, placement=slice(placement, placement + 1))
         new_blocks.append(block)
 
     return new_blocks
