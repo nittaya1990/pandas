@@ -218,9 +218,19 @@ class SparseFrameAccessor(BaseAccessor, PandasDelegate):
     """
 
     def _validate(self, data):
-        dtypes = data.dtypes
-        if not all(isinstance(t, SparseDtype) for t in dtypes):
-            raise AttributeError(self._validation_msg)
+        # dtypes = data.dtypes
+        # if not all(isinstance(t, SparseDtype) for t in dtypes):
+        #     raise AttributeError(self._validation_msg)
+        pass
+
+    def to_scipy_sparse(self):
+        import sparse
+
+        df = self._parent
+        assert len(df._data.blocks) == 1
+        arr = df._data.blocks[0].values
+        assert isinstance(arr, sparse.SparseArray)
+        return arr.to_scipy_sparse()
 
     @classmethod
     def from_spmatrix(cls, data, index=None, columns=None):

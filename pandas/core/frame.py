@@ -435,6 +435,8 @@ class DataFrame(NDFrame):
         dtype: Optional[Dtype] = None,
         copy: bool = False,
     ):
+        import sparse
+
         if data is None:
             data = {}
         if dtype is not None:
@@ -472,7 +474,7 @@ class DataFrame(NDFrame):
                     data = data.copy()
                 mgr = init_ndarray(data, index, columns, dtype=dtype, copy=copy)
 
-        elif isinstance(data, (np.ndarray, Series, Index)):
+        elif isinstance(data, (np.ndarray, Series, Index, sparse.COO)):
             if data.dtype.names:
                 data_columns = list(data.dtype.names)
                 data = {k: data[k] for k in data_columns}
