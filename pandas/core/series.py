@@ -723,6 +723,7 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
         name = names[0] if len(set(names)) == 1 else None
 
         def construct_return(result):
+            # TODO: finalize
             if lib.is_scalar(result):
                 return result
             elif result.ndim > 1:
@@ -3322,7 +3323,11 @@ Name: Max Speed, dtype: float64
         Brunei        434000
         dtype: int64
         """
-        return algorithms.SelectNSeries(self, n=n, keep=keep).nlargest()
+        return (
+            algorithms.SelectNSeries(self, n=n, keep=keep)
+            .nlargest()
+            .__finalize__(self, method="nlargest")
+        )
 
     def nsmallest(self, n=5, keep="first") -> "Series":
         """
@@ -3419,7 +3424,11 @@ Name: Max Speed, dtype: float64
         Anguilla    11300
         dtype: int64
         """
-        return algorithms.SelectNSeries(self, n=n, keep=keep).nsmallest()
+        return (
+            algorithms.SelectNSeries(self, n=n, keep=keep)
+            .nsmallest()
+            .__finalize__(self, method="nsmallest")
+        )
 
     def swaplevel(self, i=-2, j=-1, copy=True) -> "Series":
         """
@@ -3463,7 +3472,7 @@ Name: Max Speed, dtype: float64
         if not isinstance(self.index, MultiIndex):  # pragma: no cover
             raise Exception("Can only reorder levels on a hierarchical axis.")
 
-        result = self.copy()
+        result = self.copy()  # calls finalize
         assert isinstance(result.index, ABCMultiIndex)
         result.index = result.index.reorder_levels(order)
         return result
@@ -3521,7 +3530,9 @@ Name: Max Speed, dtype: float64
 
         values, counts = reshape.explode(np.asarray(self.array))
 
-        result = Series(values, index=self.index.repeat(counts), name=self.name)
+        result = Series(
+            values, index=self.index.repeat(counts), name=self.name
+        ).__finalize__(self, method="explode")
         return result
 
     def unstack(self, level=-1, fill_value=None):
@@ -3565,7 +3576,7 @@ Name: Max Speed, dtype: float64
         """
         from pandas.core.reshape.reshape import unstack
 
-        return unstack(self, level, fill_value)
+        return unstack(self, level, fill_value).__finalize__(self, method="unstack")
 
     # ----------------------------------------------------------------------
     # function application
@@ -3935,7 +3946,7 @@ Name: Max Speed, dtype: float64
         fill_axis=0,
         broadcast_axis=None,
     ):
-        return super().align(
+        a, b = super().align(
             other,
             join=join,
             axis=axis,
@@ -3947,6 +3958,9 @@ Name: Max Speed, dtype: float64
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
         )
+        a.__finalize__((self, other), method="align")
+        b.__finalize__((self, other), method="align")
+        return a, b
 
     def rename(
         self,
@@ -4518,7 +4532,7 @@ Name: Max Speed, dtype: float64
         self._get_axis_number(axis or 0)
 
         if self._can_hold_na:
-            result = remove_na_arraylike(self)
+            result = remove_na_arraylike(self)  # getitem calls finalize
             if inplace:
                 self._update_inplace(result)
             else:
