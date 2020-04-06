@@ -951,6 +951,7 @@ def _str_extract_frame(arr, pat, flags=0):
     str_extract(expand=True), and always returns a DataFrame.
 
     """
+    # TODO: why doesn't this go through wrap_result?
     from pandas import DataFrame
 
     regex = re.compile(pat, flags=flags)
@@ -2253,11 +2254,15 @@ class StringMethods(NoNewAttributesMixin):
             index = self._orig.index
             if expand:
                 cons = self._orig._constructor_expanddim
-                result = cons(result, columns=name, index=index, dtype=dtype)
+                result = cons(
+                    result, columns=name, index=index, dtype=dtype
+                ).__finalize__(self._orig, method="str")
             else:
                 # Must be a Series
                 cons = self._orig._constructor
-                result = cons(result, name=name, index=index, dtype=dtype)
+                result = cons(result, name=name, index=index, dtype=dtype).__finalize__(
+                    self._orig, method="str"
+                )
             return result
 
     def _get_series_list(self, others):

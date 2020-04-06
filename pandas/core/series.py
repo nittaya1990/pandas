@@ -3956,6 +3956,7 @@ Name: Max Speed, dtype: float64
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
         )
+        # TODO(API): Should these be method=align-left, and align-right?
         a.__finalize__((self, other), method="align")
         b.__finalize__((self, other), method="align")
         return a, b
