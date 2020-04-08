@@ -175,6 +175,12 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
         The name to give to the Series.
     copy : bool, default False
         Copy input data.
+    allows_duplicate_labels : bool, default True
+        Whether the Series can have duplicate labels in the index.
+        By default, duplicates are allowed. Set to false to raise
+        a :class:`pandas.errors.DuplicateLabelError` if duplicate are
+        detected. This value will propagate through most operations in pandas
+        that return new Series or DataFrame objects.
     """
 
     _typ = "series"
@@ -201,7 +207,14 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
     # Constructors
 
     def __init__(
-        self, data=None, index=None, dtype=None, name=None, copy=False, fastpath=False
+        self,
+        data=None,
+        index=None,
+        dtype=None,
+        name=None,
+        copy=False,
+        allows_duplicate_labels=True,
+        fastpath=False,
     ):
 
         # we are called internally, so short-circuit
@@ -323,7 +336,9 @@ class Series(base.IndexOpsMixin, generic.NDFrame):
 
                 data = SingleBlockManager.from_array(data, index)
 
-        generic.NDFrame.__init__(self, data)
+        generic.NDFrame.__init__(
+            self, data, allows_duplicate_labels=allows_duplicate_labels
+        )
         self.name = name
         self._set_axis(0, index, fastpath=True)
 

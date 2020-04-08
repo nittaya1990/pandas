@@ -200,6 +200,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         data: BlockManager,
         copy: bool = False,
         attrs: Optional[Mapping[Optional[Hashable], Any]] = None,
+        allows_duplicate_labels: bool = True,
     ):
         # copy kwarg is retained for mypy compat, is not used
 
@@ -211,6 +212,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         else:
             attrs = dict(attrs)
         object.__setattr__(self, "_attrs", attrs)
+        object.__setattr__(self, "allows_duplicate_labels", allows_duplicate_labels)
 
     @classmethod
     def _init_mgr(cls, mgr, axes=None, dtype=None, copy=False):
@@ -248,6 +250,22 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
     @attrs.setter
     def attrs(self, value: Mapping[Optional[Hashable], Any]) -> None:
         self._attrs = dict(value)
+
+    @property
+    def allows_duplicate_labels(self) -> bool:
+        """
+        Whether this object allows duplicate labels.
+        """
+        return self._allows_duplicate_labels
+
+    @allows_duplicate_labels.setter
+    def allows_duplicate_labels(self, value: bool):
+        value = bool(value)
+        if not value:
+            for ax in self.axes:
+                ax._check_unique()
+
+        self._allows_duplicate_labels = value
 
     @classmethod
     def _validate_dtype(cls, dtype):

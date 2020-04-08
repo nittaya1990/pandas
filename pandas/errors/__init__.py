@@ -184,3 +184,18 @@ class AbstractMethodError(NotImplementedError):
         else:
             name = type(self.class_instance).__name__
         return f"This {self.methodtype} must be defined in the concrete class {name}"
+
+
+class DuplicateLabelError(ValueError):
+    """
+    Error raised when an operation would introduce duplicate labels.
+    Examples
+    --------
+    >>> s = pd.Series([1, 2], index=['A', 'A'], allows_duplicate_labels=False)
+    Traceback (most recent call last):
+       ...
+    DuplicateLabelError: Index has duplicates.
+          positions
+    label
+    A        [0, 1]
+    """

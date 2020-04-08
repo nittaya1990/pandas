@@ -353,6 +353,12 @@ class DataFrame(NDFrame):
         Data type to force. Only a single dtype is allowed. If None, infer.
     copy : bool, default False
         Copy data from inputs. Only affects DataFrame / 2d ndarray input.
+    allows_duplicate_labels : bool, default True
+        Whether the DataFrame can have duplicate labels in the index or
+        columns. By default, duplicates are allowed. Set to false to raise
+        a :class:`pandas.errors.DuplicateLabelError` if duplicate are
+        detected. This value will propagate through most operations in pandas
+        that return new Series or DataFrame objects.
 
     See Also
     --------
@@ -424,6 +430,7 @@ class DataFrame(NDFrame):
         columns: Optional[Axes] = None,
         dtype: Optional[Dtype] = None,
         copy: bool = False,
+        allows_duplicate_labels: bool = True,
     ):
         if data is None:
             data = {}
@@ -516,7 +523,7 @@ class DataFrame(NDFrame):
             else:
                 raise ValueError("DataFrame constructor not properly called!")
 
-        NDFrame.__init__(self, mgr)
+        NDFrame.__init__(self, mgr, allows_duplicate_labels=allows_duplicate_labels)
 
     # ----------------------------------------------------------------------
 
