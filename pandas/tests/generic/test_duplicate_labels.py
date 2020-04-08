@@ -8,6 +8,8 @@ import pandas.errors
 
 import pandas as pd
 
+from .conftest import not_implemented_mark
+
 # ----------------------------------------------------------------------------
 # Preservation
 
@@ -29,25 +31,24 @@ class TestPreserves:
         result = cls(data, allows_duplicate_labels=False)
         assert result.allows_duplicate_labels is False
 
-    @pytest.mark.parametrize(
-        "func",
-        [
-            operator.itemgetter(["a"]),
-            operator.methodcaller("add", 1),
-            operator.methodcaller("rename", str.upper),
-            operator.methodcaller("rename", "name"),
-            operator.methodcaller("abs"),
-            # TODO: test np.abs
-        ],
-    )
-    def test_preserved_series(self, func):
-        s = pd.Series([0, 1], index=["a", "b"], allows_duplicate_labels=False)
-        assert func(s).allows_duplicate_labels is False
+    def test_preserved_method(self, ndframe_method):
+        cls, init_args, method = ndframe_method
+        if "repeat" in str(method):
+            method = operator.methodcaller("repeat", 1)
+        if "take" in str(method):
+            method = operator.methodcaller("take", [0])
+        if "sample" in str(method):
+            method = operator.methodcaller("sample", n=1)
 
+        ndframe = cls(*init_args, allows_duplicate_labels=False)
+        result = method(ndframe)
+        assert result.allows_duplicate_labels is False
+
+    # TODO: frame / frame, frame / series
     @pytest.mark.parametrize(
         "other", [pd.Series(0, index=["a", "b", "c"]), pd.Series(0, index=["a", "b"])]
     )
-    # TODO: frame
+    @pytest.mark.xfail(reason="Not Implemented")
     def test_align(self, other):
         s = pd.Series([0, 1], index=["a", "b"], allows_duplicate_labels=False)
         a, b = s.align(other)
@@ -61,13 +62,11 @@ class TestPreserves:
         assert df.loc[["a"]].allows_duplicate_labels is False
         assert df.loc[:, ["A", "B"]].allows_duplicate_labels is False
 
-    def test_to_frame(self):
-        s = pd.Series(dtype=int, allows_duplicate_labels=False)
-        assert s.to_frame().allows_duplicate_labels is False
-
     @pytest.mark.parametrize("func", ["add", "sub"])
     @pytest.mark.parametrize("frame", [False, True])
     @pytest.mark.parametrize("other", [1, pd.Series([1, 2], name="A")])
+    # TODO: ensure coverage in conftest
+    @pytest.mark.xfail(reason="Not implemented", strict=False)
     def test_binops(self, func, other, frame):
         df = pd.Series(
             [1, 2], name="A", index=["a", "b"], allows_duplicate_labels=False
@@ -80,6 +79,8 @@ class TestPreserves:
         assert df.allows_duplicate_labels is False
         assert func(df).allows_duplicate_labels is False
 
+    @pytest.mark.xfail(reason="Not implemented")
+    # TODO: ensure coverage in conftest
     def test_preserve_getitem(self):
         df = pd.DataFrame({"A": [1, 2]}, allows_duplicate_labels=False)
         assert df[["A"]].allows_duplicate_labels is False
@@ -173,6 +174,7 @@ class TestPreserves:
             ),
         ],
     )
+    @pytest.mark.xfail(reason="Not implemented")
     def test_concat(self, objs, kwargs):
         result = pd.concat(objs, **kwargs)
         assert result.allows_duplicate_labels is False
@@ -181,7 +183,7 @@ class TestPreserves:
         "left, right, kwargs, expected",
         [
             # false false false
-            (
+            pytest.param(
                 pd.DataFrame(
                     {"A": [0, 1]}, index=["a", "b"], allows_duplicate_labels=False
                 ),
@@ -190,18 +192,20 @@ class TestPreserves:
                 ),
                 dict(left_index=True, right_index=True),
                 False,
+                marks=not_implemented_mark,
             ),
             # false true false
-            (
+            pytest.param(
                 pd.DataFrame(
                     {"A": [0, 1]}, index=["a", "b"], allows_duplicate_labels=False
                 ),
                 pd.DataFrame({"B": [0, 1]}, index=["a", "d"]),
                 dict(left_index=True, right_index=True),
                 False,
+                marks=not_implemented_mark,
             ),
             # true true true
-            (
+            pytest.param(
                 pd.DataFrame({"A": [0, 1]}, index=["a", "b"]),
                 pd.DataFrame({"B": [0, 1]}, index=["a", "d"]),
                 dict(left_index=True, right_index=True),
@@ -213,6 +217,7 @@ class TestPreserves:
         result = pd.merge(left, right, **kwargs)
         assert result.allows_duplicate_labels is expected
 
+    @pytest.mark.xfail(reason="Not implemented")
     def test_groupby(self):
         # XXX: This is under tested
         # TODO:
@@ -225,6 +230,7 @@ class TestPreserves:
         assert result.allows_duplicate_labels is False
 
     @pytest.mark.parametrize("frame", [True, False])
+    @pytest.mark.xfail(reason="Not implemented")
     def test_window(self, frame):
         df = pd.Series(
             1,
@@ -277,6 +283,7 @@ class TestRaises:
     @pytest.mark.parametrize(
         "func", [operator.methodcaller("append", pd.Series(0, index=["a", "b"]))]
     )
+    @pytest.mark.xfail(reason="Not implemented.")
     def test_series_raises(self, func):
         s = pd.Series([0, 1], index=["a", "b"], allows_duplicate_labels=False)
         with pytest.raises(pandas.errors.DuplicateLabelError):
@@ -288,12 +295,24 @@ class TestRaises:
             (operator.itemgetter(["A", "A"]), None),
             # loc
             (operator.itemgetter(["a", "a"]), "loc"),
-            (operator.itemgetter(("a", ["A", "A"])), "loc"),
-            (operator.itemgetter((["a", "a"], "A")), "loc"),
+            pytest.param(
+                operator.itemgetter(("a", ["A", "A"])),
+                "loc",
+                marks=not_implemented_mark,
+            ),
+            pytest.param(
+                operator.itemgetter((["a", "a"], "A")),
+                "loc",
+                marks=not_implemented_mark,
+            ),
             # iloc
             (operator.itemgetter([0, 0]), "iloc"),
-            (operator.itemgetter((0, [0, 0])), "iloc"),
-            (operator.itemgetter(([0, 0], 0)), "iloc"),
+            pytest.param(
+                operator.itemgetter((0, [0, 0])), "iloc", marks=not_implemented_mark
+            ),
+            pytest.param(
+                operator.itemgetter(([0, 0], 0)), "iloc", marks=not_implemented_mark
+            ),
         ],
     )
     def test_getitem_raises(self, getter, target):
@@ -321,10 +340,12 @@ class TestRaises:
             )
         ],
     )
+    @pytest.mark.xfail(reason="Not implemented")
     def test_concat_raises(self, objs, kwargs):
         with pytest.raises(pandas.errors.DuplicateLabelError):
             pd.concat(objs, **kwargs)
 
+    @pytest.mark.xfail(reason="Not implemented")
     def test_merge_raises(self):
         a = pd.DataFrame(
             {"A": [0, 1, 2]}, index=["a", "b", "c"], allows_duplicate_labels=False

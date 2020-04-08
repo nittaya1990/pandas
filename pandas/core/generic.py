@@ -5177,6 +5177,9 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
             for name in self._metadata:
                 assert isinstance(name, str)
                 object.__setattr__(self, name, getattr(other, name, None))
+
+            # Duplicate labels
+            self.allows_duplicate_labels = other.allows_duplicate_labels
         return self
 
     def __getattr__(self, name: str):
