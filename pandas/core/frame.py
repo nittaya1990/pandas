@@ -438,6 +438,13 @@ class DataFrame(NDFrame):
         dtype: Optional[Dtype] = None,
         copy: bool = False,
     ):
+        array_types = (np.ndarray, Series, Index)
+        try:
+            import sparse
+        except ImportError:
+            pass
+        else:
+            array_types += (sparse.SparseArray,)
         if data is None:
             data = {}
         if dtype is not None:
@@ -476,7 +483,7 @@ class DataFrame(NDFrame):
                     data = data.copy()
                 mgr = init_ndarray(data, index, columns, dtype=dtype, copy=copy)
 
-        elif isinstance(data, (np.ndarray, Series, Index)):
+        elif isinstance(data, array_types):
             if data.dtype.names:
                 data_columns = list(data.dtype.names)
                 data = {k: data[k] for k in data_columns}
@@ -536,6 +543,12 @@ class DataFrame(NDFrame):
                 raise ValueError("DataFrame constructor not properly called!")
 
         NDFrame.__init__(self, mgr)
+
+    @property
+    def data(self):
+        """Access homogenous data for scikit-learn testing"""
+        assert len(self._mgr.blocks) == 1
+        return self._mgr.blocks[0].values
 
     # ----------------------------------------------------------------------
 
