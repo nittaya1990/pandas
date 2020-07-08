@@ -242,6 +242,18 @@ def test_min_max(method, skipna):
         assert result is pd.NA
 
 
+@pytest.mark.parametrize("method", ["idxmin", "idxmax"])
+@pytest.mark.parametrize("skipna", [True, False])
+def test_idx_minmax(method, skipna):
+    arr = pd.Series(["b", "a", "c", None], dtype="string")
+    result = getattr(arr, method)(skipna=skipna)
+    if skipna:
+        expected = 1 if method == "idxmin" else 2
+        assert result == expected
+    else:
+        assert result is pd.NA
+
+
 @pytest.mark.parametrize("method", ["min", "max"])
 @pytest.mark.parametrize(
     "arr",

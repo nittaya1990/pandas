@@ -18,6 +18,7 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
     is_complex,
     is_datetime64_any_dtype,
+    is_extension_array_dtype,
     is_float,
     is_float_dtype,
     is_integer,
@@ -920,6 +921,8 @@ def nanargmax(
     >>> nanops.nanargmax(arr, axis=1)
     array([2, 2, 1, 1], dtype=int64)
     """
+    if is_extension_array_dtype(values.dtype):
+        return values._reduce("argmax", skipna=skipna)
     values, mask, _, _, _ = _get_values(values, True, fill_value_typ="-inf", mask=mask)
     result = values.argmax(axis)
     result = _maybe_arg_null_out(result, axis, mask, skipna)
@@ -964,10 +967,15 @@ def nanargmin(
     >>> nanops.nanargmin(arr, axis=1)
     array([0, 0, 1, 1], dtype=int64)
     """
-    values, mask, _, _, _ = _get_values(values, True, fill_value_typ="+inf", mask=mask)
-    result = values.argmin(axis)
-    result = _maybe_arg_null_out(result, axis, mask, skipna)
-    return result
+    if is_extension_array_dtype(values.dtype):
+        return values._reduce("argmin", skipna=skipna)
+    else:
+        values, mask, _, _, _ = _get_values(
+            values, True, fill_value_typ="+inf", mask=mask
+        )
+        result = values.argmin(axis)
+        result = _maybe_arg_null_out(result, axis, mask, skipna)
+        return result
 
 
 @disallow("M8", "m8")

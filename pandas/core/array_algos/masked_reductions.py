@@ -100,3 +100,11 @@ def min(values: np.ndarray, mask: np.ndarray, skipna: bool = True):
 
 def max(values: np.ndarray, mask: np.ndarray, skipna: bool = True):
     return _minmax(np.max, values=values, mask=mask, skipna=skipna)
+
+
+def argmin(values: np.ndarray, mask: np.ndarray, skipna: bool = True):
+    return _minmax(np.argmin, values=values, mask=mask, skipna=skipna)
+
+
+def argmax(values: np.ndarray, mask: np.ndarray, skipna: bool = True):
+    return _minmax(np.argmax, values=values, mask=mask, skipna=skipna)

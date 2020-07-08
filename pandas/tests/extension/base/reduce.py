@@ -51,6 +51,20 @@ class BaseNumericReduceTests(BaseReduceTests):
             warnings.simplefilter("ignore", RuntimeWarning)
             self.check_reduce(s, op_name, skipna)
 
+    @pytest.mark.parametrize("method", ["idxmax", "idxmin"])
+    @pytest.mark.parametrize("skipna", [True, False])
+    def test_idxmaxmin(self, data, method, skipna):
+        s = pd.Series(data)
+        result = getattr(s, method)(skipna=skipna)
+        if method == "idxmax":
+            compare = s.max(skipna=skipna)
+        else:
+            compare = s.min(skipna=skipna)
+        if pd.isna(result):
+            assert pd.isna(compare)
+        else:
+            assert s[result] == compare
+
 
 class BaseBooleanReduceTests(BaseReduceTests):
     @pytest.mark.parametrize("skipna", [True, False])

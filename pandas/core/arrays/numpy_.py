@@ -354,6 +354,20 @@ class PandasArray(
         )
         return result
 
+    def argmin(self, skipna: bool = True, **kwargs) -> Scalar:
+        nv.validate_argmin((), kwargs)
+        result = masked_reductions.argmin(
+            values=self.to_numpy(), mask=self.isna(), skipna=skipna
+        )
+        return result
+
+    def argmax(self, skipna: bool = True, **kwargs) -> Scalar:
+        nv.validate_argmax((), kwargs)
+        result = masked_reductions.argmax(
+            values=self.to_numpy(), mask=self.isna(), skipna=skipna
+        )
+        return result
+
     def sum(self, axis=None, skipna=True, min_count=0, **kwargs) -> Scalar:
         nv.validate_sum((), kwargs)
         return nanops.nansum(

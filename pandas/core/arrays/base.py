@@ -1095,7 +1095,7 @@ class ExtensionArray:
         name : str
             Name of the function, supported values are:
             { any, all, min, max, sum, mean, median, prod,
-            std, var, sem, kurt, skew }.
+            std, var, sem, kurt, skew, argmin, argmax}.
         skipna : bool, default True
             If True, skip NaN values.
         **kwargs

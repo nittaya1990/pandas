@@ -2085,10 +2085,18 @@ Name: Max Speed, dtype: float64
         nan
         """
         skipna = nv.validate_argmin_with_skipna(skipna, args, kwargs)
-        i = nanops.nanargmin(self._values, skipna=skipna)
-        if i == -1:
-            return np.nan
-        return self.index[i]
+        if is_extension_array_dtype(self.dtype):
+            i = self.array._reduce("argmin", skipna=skipna)
+        else:
+            i = nanops.nanargmin(self._values, skipna=skipna)
+            if i == -1:
+                i = np.nan
+        if is_integer(i):
+            # valid
+            return self.index[i]
+        else:
+            # NA
+            return i
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):
         """
