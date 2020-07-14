@@ -2831,6 +2831,15 @@ def test_duplicate_keys(keys):
     tm.assert_frame_equal(result, expected)
 
 
+def test_duplicate_index_labels():
+    # https://github.com/pandas-dev/pandas/issues/35238
+    df1 = pd.DataFrame({"a": [0, 1]})
+    df2 = pd.DataFrame({"b": [0, 1, 2]}, index=[0, 0, 1])
+    result = pd.concat([df1, df2], axis=1)
+    expected = pd.DataFrame({"a": [0, 0, 1], "b": [0, 1, 2]}, index=[0, 0, 1])
+    tm.assert_frame_equal(result, expected)
+
+
 @pytest.mark.parametrize(
     "obj",
     [
@@ -2857,3 +2866,18 @@ def test_concat_frame_axis0_extension_dtypes():
     result = pd.concat([df2, df1], ignore_index=True)
     expected = pd.DataFrame({"a": [4, 5, 6, 1, 2, 3]}, dtype="Int64")
     tm.assert_frame_equal(result, expected)
+
+
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/35092")
+def test_append_sort(sort):
+    # GH 35092. Check that DataFrame.append respects the sort argument.
+    df1 = pd.DataFrame(data={0: [1, 2], 1: [3, 4]})
+    df2 = pd.DataFrame(data={3: [1, 2], 2: [3, 4]})
+    cols = list(df1.columns) + list(df2.columns)
+    if sort:
+        cols.sort()
+
+    result = df1.append(df2, sort=sort).columns
+    expected = type(result)(cols)
+    tm.assert_index_equal(result, expected)
