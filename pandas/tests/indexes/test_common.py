@@ -400,7 +400,6 @@ class TestCommon:
 
 @pytest.mark.parametrize("arr", [[0, 1, 4, 3]])
 @pytest.mark.parametrize("dtype", ["int8", "int16", "int32", "int64"])
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/35092")
 def test_union_index_no_sort(arr, sort, dtype):
     # GH 35092. Check that we don't sort with sort=False
     ind1 = Index(arr[:2], dtype=dtype)
