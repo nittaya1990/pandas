@@ -2868,8 +2868,18 @@ def test_concat_frame_axis0_extension_dtypes():
     tm.assert_frame_equal(result, expected)
 
 
-@pytest.mark.parametrize("sort", [True, False])
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/35092")
+@pytest.mark.parametrize(
+    "sort",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="https://github.com/pandas-dev/pandas/issues/35092"
+            ),
+        ),
+    ],
+)
 def test_append_sort(sort):
     # GH 35092. Check that DataFrame.append respects the sort argument.
     df1 = pd.DataFrame(data={0: [1, 2], 1: [3, 4]})
