@@ -428,6 +428,50 @@ class BaseMethodsTests(BaseExtensionTests):
             expected = expected.to_frame(name="a")
         self.assert_equal(result, expected)
 
+    def test_where_frame(self, data):
+        a = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": data[:3], "c": [1.0, 2.0, 3.0]})
+        cond = np.tile(np.array([True, False, True]).reshape(-1, 1), 3)
+        expected = pd.DataFrame(
+            {
+                "a": [1.0, np.nan, 3.0],
+                "b": type(data)._from_sequence(
+                    [data[0], data.dtype.na_value, data[2]], dtype=data.dtype
+                ),
+                "c": [1.0, np.nan, 3.0],
+            }
+        )
+
+        result = a.where(cond)
+        self.assert_frame_equal(result, expected)
+
+    def test_where_frame_other(self, data):
+        a = pd.DataFrame({"a": [1, 2, 3], "b": data[:3], "c": [1, 2, 3]})
+        cond = np.tile(np.array([True, False, True]).reshape(-1, 1), 3)
+        other = pd.DataFrame(
+            {"a": [0, 0, 0], "b": data.take([0, 0, 0]), "c": [0, 0, 0]}
+        )
+        result = a.where(cond, other=other)
+        expected = pd.DataFrame(
+            {"a": [1, 0, 3], "b": data.take([0, 0, 2]), "c": [1, 0, 3]}
+        )
+
+        self.assert_frame_equal(result, expected)
+
+    def test_where_frame_boolean_cond(self, data):
+        # https://github.com/pandas-dev/pandas/issues/35429
+        a = pd.DataFrame({"a": data[:3]})
+        cond = pd.Series(pd.array([True, False, pd.NA]))
+        result = a.where(cond, other=data[0])
+        expected = pd.DataFrame({"a": data.take([0, 1, 0])})
+        self.assert_frame_equal(result, expected)
+
+    def test_mask_frame_boolean_cond(self, data):
+        a = pd.DataFrame({"a": data[:3]})
+        cond = pd.Series(pd.array([True, False, pd.NA]))
+        result = a.where(cond, other=data[0])
+        expected = pd.DataFrame({"a": data.take([0, 1, 0])})
+        self.assert_frame_equal(result, expected)
+
     @pytest.mark.parametrize("repeats", [0, 1, 2, [1, 2, 3]])
     def test_repeat(self, data, repeats, as_series, use_numpy):
         arr = type(data)._from_sequence(data[:3], dtype=data.dtype)

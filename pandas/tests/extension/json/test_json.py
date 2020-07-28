@@ -258,6 +258,13 @@ class TestMethods(BaseJSON, base.BaseMethodsTests):
         # with shapes (4,) (4,) (0,)
         super().test_where_series(data, na_value)
 
+    @pytest.mark.skip(reason="Incorrect getitem")
+    def test_where_frame(self, data, na_value):
+        # Fails with:
+        # > if key in self.data:
+        # E TypeError: unhashable type: 'numpy.ndarray'
+        super().test_where_frame(data, na_value)
+
     @pytest.mark.skip(reason="Can't compare dicts.")
     def test_searchsorted(self, data_for_sorting):
         super().test_searchsorted(data_for_sorting)

@@ -298,6 +298,10 @@ class TestMethods(BaseSparseTests, base.BaseMethodsTests):
         expected = pd.Series(cls._from_sequence([a, b, b, b], dtype=data.dtype))
         self.assert_series_equal(result, expected)
 
+    @pytest.mark.xfail(reason="Doesn't cast int64 to float64 with NA fill value")
+    def test_where_frame(self, data):
+        super().test_where_frame(self, data)
+
     def test_combine_first(self, data):
         if data.dtype.subtype == "int":
             # Right now this is upcasted to float, just like combine_first

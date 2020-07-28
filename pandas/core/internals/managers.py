@@ -370,7 +370,7 @@ class BlockManager(PandasObject):
 
         align_keys = align_keys or []
         result_blocks: List[Block] = []
-        # fillna: Series/DataFrame is responsible for making sure value is aligned
+        # fillna:" Series/DataFrame is responsible for making sure value is aligned
 
         aligned_args = {k: kwargs[k] for k in align_keys}
 
@@ -385,7 +385,14 @@ class BlockManager(PandasObject):
                         if obj.ndim == 1:
                             kwargs[k] = obj.iloc[b.mgr_locs.indexer]._values
                         else:
-                            kwargs[k] = obj.iloc[:, b.mgr_locs.indexer]._values
+                            if f == "where" and k == "cond":
+                                # We know we need a boolean numpy array.
+                                kwargs[k] = obj.iloc[:, b.mgr_locs.indexer].to_numpy(
+                                    dtype="bool", na_value=False
+                                )
+                            else:
+                                # Otherwise we resort to upcasting to a common type.
+                                kwargs[k] = obj.iloc[:, b.mgr_locs.indexer]._values
                     else:
                         # otherwise we have an ndarray
                         kwargs[k] = obj[b.mgr_locs.indexer]
