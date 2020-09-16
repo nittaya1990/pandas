@@ -9786,7 +9786,7 @@ class NDFrame(PandasObject, SelectionMixin, indexing.IndexingMixin):
         2    6   30  -30
         3    7   40  -50
         """
-        return np.abs(self)
+        return np.abs(self).__finalize__(self)
 
     def describe(
         self: FrameOrSeries,

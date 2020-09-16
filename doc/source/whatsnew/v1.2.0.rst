@@ -246,7 +246,7 @@ Timezones
 Numeric
 ^^^^^^^
 - Bug in :func:`to_numeric` where float precision was incorrect (:issue:`31364`)
--
+- Bug in :meth:`Series.abs` not propagating metadata (:issue:`28283`)
 
 Conversion
 ^^^^^^^^^^

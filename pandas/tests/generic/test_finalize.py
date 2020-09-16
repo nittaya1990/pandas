@@ -786,3 +786,10 @@ def test_groupby(obj, method):
     obj.attrs = {"a": 1}
     result = method(obj.groupby([0, 0]))
     assert result.attrs == {"a": 1}
+
+
+def test_abs():
+    s = pd.Series([1, 2])
+    s.attrs["foo"] = 1
+    result = s.abs()
+    assert result.attrs == {"foo": 1}
