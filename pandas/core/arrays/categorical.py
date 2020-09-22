@@ -2471,6 +2471,7 @@ class CategoricalAccessor(PandasDelegate, PandasObject, NoNewAttributesMixin):
         self._parent = data.values
         self._index = data.index
         self._name = data.name
+        self._orig = data
         self._freeze()
 
     @staticmethod
@@ -2491,7 +2492,7 @@ class CategoricalAccessor(PandasDelegate, PandasObject, NoNewAttributesMixin):
         """
         from pandas import Series
 
-        return Series(self._parent.codes, index=self._index)
+        return Series(self._parent.codes, index=self._index).__finalize__(self._orig)
 
     def _delegate_method(self, name, *args, **kwargs):
         from pandas import Series
@@ -2499,7 +2500,9 @@ class CategoricalAccessor(PandasDelegate, PandasObject, NoNewAttributesMixin):
         method = getattr(self._parent, name)
         res = method(*args, **kwargs)
         if res is not None:
-            return Series(res, index=self._index, name=self._name)
+            return Series(res, index=self._index, name=self._name).__finalize__(
+                self._orig
+            )
 
 
 # utility routines
